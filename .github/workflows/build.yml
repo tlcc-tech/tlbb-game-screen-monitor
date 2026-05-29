@@ -87,7 +87,8 @@ jobs:
         run: |
           wails build -platform windows/amd64 -clean -tags customenv -ldflags "-X main.AppVersion=${{ steps.ver.outputs.version }}"
           Copy-Item -Force "build/bin/tlbb-game-screen-monitor.exe" "build/bin/游戏掉线监控-windows-amd64.exe"
-          Copy-Item -Force "opencv/build/install/x64/mingw/bin/opencv_*.dll" "build/bin/"
+          Copy-Item -Force "opencv/build/install/x64/mingw/bin/libopencv_*.dll" "build/bin/" -ErrorAction SilentlyContinue
+          Copy-Item -Force "opencv/build/install/x64/mingw/bin/opencv_*.dll" "build/bin/" -ErrorAction SilentlyContinue
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v5
@@ -111,6 +112,7 @@ jobs:
           generate_release_notes: true
           files: |
             dist/**/游戏掉线监控-windows-amd64.exe
+            dist/**/libopencv_*.dll
             dist/**/opencv_*.dll
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

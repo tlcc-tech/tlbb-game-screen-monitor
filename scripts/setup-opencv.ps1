@@ -16,7 +16,9 @@ $opencvLib = Join-Path $opencvInstall "x64/mingw/lib"
 $opencvVersion = "4.11.0"
 
 function Test-OpenCVReady {
-    return (Test-Path (Join-Path $opencvBin "opencv_core4110.dll"))
+    $msvcDll = Join-Path $opencvBin "opencv_core4110.dll"
+    $mingwDll = Join-Path $opencvBin "libopencv_core4110.dll"
+    return (Test-Path $msvcDll) -or (Test-Path $mingwDll)
 }
 
 function Set-OpenCVBuildEnv {
@@ -146,7 +148,7 @@ if (Test-OpenCVReady) {
 } else {
     Build-OpenCV
     if (-not (Test-OpenCVReady)) {
-        throw "OpenCV install failed; expected: $(Join-Path $opencvBin 'opencv_core4110.dll')"
+        throw "OpenCV install failed; expected opencv_core4110.dll or libopencv_core4110.dll in $opencvBin"
     }
     Write-Host "OpenCV build complete: $opencvBin"
 }
