@@ -239,14 +239,18 @@ func (m *Monitor) checkOnce(ctx context.Context, settings AppSettings) {
 	start := time.Now()
 	m.emitLog("开始识别…")
 
+	capStart := time.Now()
 	screen, err := captureScreen(settings.GameWindowTitle)
+	capElapsed := time.Since(capStart)
 	if err != nil {
 		m.setError(err.Error())
 		m.emitLog("截图失败: " + err.Error())
 		return
 	}
 
+	matchStart := time.Now()
 	scores := m.matchAll(screen)
+	matchElapsed := time.Since(matchStart)
 	elapsed := time.Since(start)
 	m.mu.Lock()
 	m.lastScores = scores
@@ -255,7 +259,7 @@ func (m *Monitor) checkOnce(ctx context.Context, settings AppSettings) {
 	m.mu.Unlock()
 
 	m.emitMatch(scores)
-	m.emitLog(fmt.Sprintf("识别完成，耗时 %.1fs", elapsed.Seconds()))
+	m.emitLog(fmt.Sprintf("识别完成，截图 %.1fs / 匹配 %.1fs（共 %.1fs）", capElapsed.Seconds(), matchElapsed.Seconds(), elapsed.Seconds()))
 
 	bestName := ""
 	bestScore := 0.0

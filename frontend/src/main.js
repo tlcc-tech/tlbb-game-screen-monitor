@@ -244,9 +244,17 @@ async function refreshTemplates() {
 
   templateListEl.querySelectorAll("[data-del]").forEach((el) => {
     el.addEventListener("click", async () => {
-      await DeleteTemplate(el.dataset.del);
-      await refreshTemplates();
-      appendLog("已删除模板");
+      const id = el.dataset.del;
+      el.disabled = true;
+      try {
+        await DeleteTemplate(id);
+        await refreshTemplates();
+        appendLog("已删除模板");
+      } catch (e) {
+        appendLog("删除失败: " + e);
+      } finally {
+        el.disabled = false;
+      }
     });
   });
 }

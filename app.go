@@ -25,6 +25,7 @@ func (a *App) startup(ctx context.Context) {
 	a.ctx = ctx
 	a.monitor.Attach(ctx)
 	setupTray(a)
+	a.startAutoUpdateCheck()
 }
 
 func (a *App) beforeClose(ctx context.Context) (prevent bool) {

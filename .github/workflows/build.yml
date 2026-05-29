@@ -46,11 +46,20 @@ jobs:
           fi
           echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
 
+      - name: Install OpenCV
+        shell: pwsh
+        run: |
+          ./scripts/setup-opencv.ps1
+          echo "C:\opencv\build\install\x64\mingw\bin" >> $env:GITHUB_PATH
+
       - name: Build (Windows)
         shell: pwsh
+        env:
+          CGO_ENABLED: "1"
         run: |
           wails build -platform windows/amd64 -clean -ldflags "-X main.AppVersion=${{ steps.ver.outputs.version }}"
           Copy-Item -Force "build/bin/tlbb-game-screen-monitor.exe" "build/bin/游戏掉线监控-windows-amd64.exe"
+          Copy-Item -Force "C:\opencv\build\install\x64\mingw\bin\opencv_*.dll" "build/bin/"
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v5

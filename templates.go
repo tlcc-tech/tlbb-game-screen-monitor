@@ -89,7 +89,6 @@ func (m *Monitor) DeleteTemplate(id string) error {
 	_ = os.Remove(path)
 
 	m.mu.Lock()
-	defer m.mu.Unlock()
 	filtered := m.settings.Templates[:0]
 	for _, t := range m.settings.Templates {
 		if t.ID != id {
@@ -97,8 +96,13 @@ func (m *Monitor) DeleteTemplate(id string) error {
 		}
 	}
 	m.settings.Templates = filtered
+	err = saveSettings(m.settings)
+	m.mu.Unlock()
+	if err != nil {
+		return err
+	}
 	m.invalidateTemplateCache(id)
-	return saveSettings(m.settings)
+	return nil
 }
 
 func (m *Monitor) UpdateTemplate(item TemplateItem) error {
@@ -180,37 +184,6 @@ func (m *Monitor) TestMatch() ([]MatchScore, error) {
 		return nil, err
 	}
 	return m.matchAll(screen), nil
-}
-
-func (m *Monitor) matchAll(screen image.Image) []MatchScore {
-	matcher := LookupMatcher{}
-	m.mu.Lock()
-	templates := append([]TemplateItem(nil), m.settings.Templates...)
-	m.mu.Unlock()
-
-	var results []MatchScore
-	for _, tpl := range templates {
-		if !tpl.Enabled {
-			continue
-		}
-		img, item, err := m.loadTemplateImage(tpl.ID)
-		if err != nil || item == nil {
-			continue
-		}
-		score, found, err := matcher.Find(screen, img)
-		if err != nil {
-			continue
-		}
-		matched := found && score >= item.Threshold
-		results = append(results, MatchScore{
-			TemplateID:   item.ID,
-			TemplateName: item.Name,
-			Score:        score,
-			Found:        found,
-			Matched:      matched,
-		})
-	}
-	return results
 }
 
 func (m *Monitor) getGameWindowTitle() string {
