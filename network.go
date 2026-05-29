@@ -9,6 +9,8 @@ import (
 	"time"
 )
 
+const defaultProbeHost = "xz.qqoq.net"
+
 type NetworkProber struct {
 	settings AppSettings
 	client   *http.Client
@@ -54,6 +56,7 @@ func (p *NetworkProber) ping(ctx context.Context, host string) bool {
 	} else {
 		cmd = exec.CommandContext(ctx, "ping", "-c", "1", "-W", "1", host)
 	}
+	hidePingCmd(cmd)
 	return cmd.Run() == nil
 }
 

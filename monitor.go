@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"image"
 	"strings"
 	"sync"
 	"time"
@@ -58,6 +59,7 @@ type Monitor struct {
 	pendingScore     float64
 	wasMatched       bool
 	pushInFlight     bool
+	tplCache         map[string]image.Image
 }
 
 func NewMonitor() *Monitor {
@@ -66,6 +68,7 @@ func NewMonitor() *Monitor {
 		settings: s,
 		matcher:  LookupMatcher{},
 		phase:    phaseIdle,
+		tplCache: make(map[string]image.Image),
 	}
 }
 
@@ -226,6 +229,16 @@ func (m *Monitor) loop(ctx context.Context) {
 }
 
 func (m *Monitor) checkOnce(ctx context.Context, settings AppSettings) {
+	m.mu.Lock()
+	if m.phase == phaseMatchedPending {
+		m.mu.Unlock()
+		return
+	}
+	m.mu.Unlock()
+
+	start := time.Now()
+	m.emitLog("开始识别…")
+
 	screen, err := captureScreen(settings.GameWindowTitle)
 	if err != nil {
 		m.setError(err.Error())
@@ -234,6 +247,7 @@ func (m *Monitor) checkOnce(ctx context.Context, settings AppSettings) {
 	}
 
 	scores := m.matchAll(screen)
+	elapsed := time.Since(start)
 	m.mu.Lock()
 	m.lastScores = scores
 	m.lastChecked = time.Now()
@@ -241,6 +255,7 @@ func (m *Monitor) checkOnce(ctx context.Context, settings AppSettings) {
 	m.mu.Unlock()
 
 	m.emitMatch(scores)
+	m.emitLog(fmt.Sprintf("识别完成，耗时 %.1fs", elapsed.Seconds()))
 
 	bestName := ""
 	bestScore := 0.0
@@ -255,10 +270,6 @@ func (m *Monitor) checkOnce(ctx context.Context, settings AppSettings) {
 
 	m.mu.Lock()
 	defer m.mu.Unlock()
-
-	if m.phase == phaseMatchedPending {
-		return
-	}
 
 	if !matched {
 		if m.wasMatched && settings.NotifyOnRecover {
@@ -298,18 +309,22 @@ func (m *Monitor) handlePendingPush(ctx context.Context, settings AppSettings, t
 
 	deadline := time.Now().Add(time.Duration(settings.NetworkWaitMaxMin) * time.Minute)
 	probeInterval := 3 * time.Second
+	prober := NewNetworkProber(settings)
 
-	m.emitLog("等待网络恢复…")
-
-	waitCtx, cancel := context.WithDeadline(ctx, deadline)
-	recovered := waitForNetwork(waitCtx, settings, 2, probeInterval)
-	cancel()
-	if !recovered {
-		select {
-		case <-ctx.Done():
-			return
-		default:
-			m.emitLog("网络等待超时，仍将尝试推送")
+	if prober.IsOnline(ctx) {
+		m.emitLog("网络已连通，立即推送")
+	} else {
+		m.emitLog("等待网络恢复…")
+		waitCtx, cancel := context.WithDeadline(ctx, deadline)
+		recovered := waitForNetwork(waitCtx, settings, 2, probeInterval)
+		cancel()
+		if !recovered {
+			select {
+			case <-ctx.Done():
+				return
+			default:
+				m.emitLog("网络等待超时，仍将尝试推送")
+			}
 		}
 	}
 

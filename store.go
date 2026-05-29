@@ -43,8 +43,8 @@ func defaultSettings() AppSettings {
 		ConsecutiveHits:   3,
 		PushCooldownMin:   10,
 		NetworkWaitMaxMin: 30,
-		PingHost:          "114.114.114.114",
-		HttpProbeURL:      "https://www.baidu.com",
+		PingHost:          defaultProbeHost,
+		HttpProbeURL:      "https://" + defaultProbeHost,
 		UsePing:           true,
 		UseHttp:           true,
 		Templates:         []TemplateItem{},
@@ -163,10 +163,10 @@ func normalizeSettings(s *AppSettings) {
 		s.NetworkWaitMaxMin = 30
 	}
 	if s.PingHost == "" {
-		s.PingHost = "114.114.114.114"
+		s.PingHost = defaultProbeHost
 	}
 	if s.HttpProbeURL == "" {
-		s.HttpProbeURL = "https://www.baidu.com"
+		s.HttpProbeURL = "https://" + defaultProbeHost
 	}
 	for i := range s.Templates {
 		if s.Templates[i].Threshold <= 0 || s.Templates[i].Threshold > 1 {

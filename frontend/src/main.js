@@ -60,11 +60,11 @@ document.querySelector("#app").innerHTML = `
                 <input class="input full" id="gameWindowTitle" type="text" placeholder="留空=全屏，例如：天龙八部" />
 
                 <label class="form-label">Ping 主机</label>
-                <input class="input full" id="pingHost" type="text" value="114.114.114.114" />
+                <input class="input full" id="pingHost" type="text" value="xz.qqoq.net" />
                 <label class="form-check"><input type="checkbox" id="usePing" checked /> 启用 Ping 探测</label>
 
                 <label class="form-label">HTTP 探测 URL</label>
-                <input class="input full" id="httpProbeUrl" type="text" value="https://www.baidu.com" />
+                <input class="input full" id="httpProbeUrl" type="text" value="https://xz.qqoq.net" />
                 <label class="form-check"><input type="checkbox" id="useHttp" checked /> 启用 HTTP 探测</label>
 
                 <label class="form-check span2"><input type="checkbox" id="notifyOnRecover" /> 掉线画面消失后发「疑似已重连」通知</label>
@@ -157,8 +157,8 @@ function applySettingsToUI(s) {
   document.getElementById("consecutiveHits").value = s.consecutiveHits || 3;
   document.getElementById("pushCooldown").value = s.pushCooldownMin || 10;
   document.getElementById("networkWaitMax").value = s.networkWaitMaxMin || 30;
-  document.getElementById("pingHost").value = s.pingHost || "114.114.114.114";
-  document.getElementById("httpProbeUrl").value = s.httpProbeUrl || "https://www.baidu.com";
+  document.getElementById("pingHost").value = s.pingHost || "xz.qqoq.net";
+  document.getElementById("httpProbeUrl").value = s.httpProbeUrl || "https://xz.qqoq.net";
   document.getElementById("usePing").checked = s.usePing !== false;
   document.getElementById("useHttp").checked = s.useHttp !== false;
   document.getElementById("gameWindowTitle").value = s.gameWindowTitle || "";

@@ -73,6 +73,7 @@ func (m *Monitor) SaveTemplate(name string, pngBase64 string, threshold float64)
 	if err != nil {
 		return TemplateItem{}, err
 	}
+	m.invalidateTemplateCache(id)
 	return item, nil
 }
 
@@ -96,6 +97,7 @@ func (m *Monitor) DeleteTemplate(id string) error {
 		}
 	}
 	m.settings.Templates = filtered
+	m.invalidateTemplateCache(id)
 	return saveSettings(m.settings)
 }
 
@@ -127,6 +129,12 @@ func (m *Monitor) ImportTemplateFromPath(name string, srcPath string, threshold 
 	return m.SaveTemplate(name, base64.StdEncoding.EncodeToString(data), threshold)
 }
 
+func (m *Monitor) invalidateTemplateCache(id string) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	delete(m.tplCache, id)
+}
+
 func (m *Monitor) loadTemplateImage(id string) (image.Image, *TemplateItem, error) {
 	m.mu.Lock()
 	var item *TemplateItem
@@ -135,6 +143,12 @@ func (m *Monitor) loadTemplateImage(id string) (image.Image, *TemplateItem, erro
 			cp := m.settings.Templates[i]
 			item = &cp
 			break
+		}
+	}
+	if item != nil {
+		if cached, ok := m.tplCache[id]; ok {
+			m.mu.Unlock()
+			return cached, item, nil
 		}
 	}
 	m.mu.Unlock()
@@ -154,6 +168,9 @@ func (m *Monitor) loadTemplateImage(id string) (image.Image, *TemplateItem, erro
 	if err != nil {
 		return nil, nil, err
 	}
+	m.mu.Lock()
+	m.tplCache[id] = img
+	m.mu.Unlock()
 	return img, item, nil
 }
 
