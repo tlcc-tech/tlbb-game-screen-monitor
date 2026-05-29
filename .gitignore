@@ -1,4 +1,5 @@
 build/bin/
+opencv/
 tlbb-game-screen-monitor
 *.exe
 build/dmg/
