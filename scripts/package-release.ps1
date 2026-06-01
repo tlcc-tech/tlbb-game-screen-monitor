@@ -1,4 +1,4 @@
-# Stage exe + runtime/ and create a clean zip (no nested zip, no duplicate exe).
+# Stage release folder (extracted layout) + optional zip for auto-update.
 param(
     [string]$RepoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
 )
@@ -6,37 +6,37 @@ param(
 $ErrorActionPreference = "Stop"
 
 $binDir = Join-Path $RepoRoot "build/bin"
+$releaseDir = Join-Path $RepoRoot "build/release"
 $exeName = "游戏掉线监控-windows-amd64.exe"
 $exePath = Join-Path $binDir $exeName
 if (-not (Test-Path $exePath)) {
     throw "Missing $exePath — run wails build first"
 }
 
-$stage = Join-Path $RepoRoot "build/package-stage"
 $runtimeSrc = Join-Path $binDir "runtime"
 if (-not (Test-Path $runtimeSrc)) {
     throw "Missing $runtimeSrc — run copy-runtime-dlls.ps1 first"
 }
 
-Remove-Item -Recurse -Force $stage -ErrorAction SilentlyContinue
-New-Item -ItemType Directory -Force -Path $stage | Out-Null
+Remove-Item -Recurse -Force $releaseDir -ErrorAction SilentlyContinue
+New-Item -ItemType Directory -Force -Path $releaseDir | Out-Null
 
-Copy-Item -Force $exePath (Join-Path $stage $exeName)
-Copy-Item -Recurse -Force $runtimeSrc (Join-Path $stage "runtime")
+Copy-Item -Force $exePath (Join-Path $releaseDir $exeName)
+Copy-Item -Recurse -Force $runtimeSrc (Join-Path $releaseDir "runtime")
 
-# MinGW runtime must sit beside exe for Windows loader at process start.
-$mingwNames = @("libgcc_s_seh-1.dll", "libstdc++-6.dll", "libwinpthread-1.dll")
-foreach ($name in $mingwNames) {
-    $src = Join-Path $binDir $name
-    if (Test-Path $src) {
-        Copy-Item -Force $src (Join-Path $stage $name)
-    }
+# All DLLs beside exe — required by Windows loader for OpenCV + MinGW at process start.
+Get-ChildItem -Path $binDir -Filter "*.dll" -File | ForEach-Object {
+    Copy-Item -Force $_.FullName (Join-Path $releaseDir $_.Name)
+}
+
+$dllCount = (Get-ChildItem -Path $releaseDir -Filter "*.dll" -File).Count
+if ($dllCount -lt 4) {
+    throw "Too few DLLs in release dir ($dllCount). OpenCV copy may have failed."
 }
 
 $zipOut = Join-Path $RepoRoot "build/游戏掉线监控-windows-amd64.zip"
 Remove-Item -Force $zipOut -ErrorAction SilentlyContinue
-Compress-Archive -Path (Join-Path $stage "*") -DestinationPath $zipOut -Force
-Remove-Item -Recurse -Force $stage
+Compress-Archive -Path (Join-Path $releaseDir "*") -DestinationPath $zipOut -Force
 
-Write-Host "Release zip: $zipOut"
-Write-Host "Contents: $exeName + 3 MinGW DLLs + runtime/"
+Write-Host "Release folder: $releaseDir ($dllCount DLLs + exe + runtime/)"
+Write-Host "Release zip (for auto-update): $zipOut"

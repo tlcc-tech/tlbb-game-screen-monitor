@@ -1,4 +1,4 @@
-# Copy runtime DLLs: opencv/mingw/dm under runtime/, MinGW also next to exe (Windows loader).
+# Copy runtime DLLs. OpenCV + MinGW must also sit beside exe (Windows PE loader).
 param(
     [string]$DestRoot = "build/bin",
     [string]$RepoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
@@ -18,7 +18,8 @@ $opencvBin = Join-Path $RepoRoot "opencv/build/install/x64/mingw/bin"
 if (Test-Path $opencvBin) {
     Copy-Item -Force "$opencvBin/libopencv_*.dll" $OpenCVDest -ErrorAction SilentlyContinue
     Copy-Item -Force "$opencvBin/opencv_*.dll" $OpenCVDest -ErrorAction SilentlyContinue
-    Write-Host "Copied OpenCV DLLs to runtime/opencv"
+    Copy-Item -Force "$OpenCVDest/*.dll" $DestRoot
+    Write-Host "Copied OpenCV DLLs to runtime/opencv and exe dir"
 }
 
 $mingwRuntime = @(
@@ -56,9 +57,7 @@ foreach ($name in $mingwRuntime) {
     $src = Join-Path $mingwBin $name
     if (-not (Test-Path $src)) { throw "Missing MinGW runtime DLL: $src" }
     Copy-Item -Force $src $MingwDest
-    # Windows PE loader resolves libgcc/libstdc++ from the exe directory at process start.
     Copy-Item -Force $src $DestRoot
-    # OpenCV DLLs load libgcc from the same directory as libopencv_*.dll.
     Copy-Item -Force $src $OpenCVDest
     Write-Host "Copied $name -> runtime/mingw, runtime/opencv, exe dir"
 }

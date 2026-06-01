@@ -19,15 +19,16 @@ Windows 桌面工具：绑定游戏窗口截图 + OpenCV 模板匹配，检测�
 
 ## 安装与目录
 
-从 GitHub **Releases** 下载 **`游戏掉线监控-windows-amd64.zip`**（不要下 Actions 里的 artifacts 文件夹），解压到任意目录：
+从 GitHub **Releases** 下载 **`游戏掉线监控-windows-amd64.exe`** 及同目录下的全部 `.dll` 文件（也可下载 zip 解压）。GitHub Actions 的 **windows-build** 产物已是解压后的目录结构，无需再套一层 zip。
 
 ```
 游戏掉线监控-windows-amd64.exe    ← 主程序
-libgcc_s_seh-1.dll                 ← MinGW 运行时（须在 exe 同目录，Windows 启动器要求）
+libopencv_*.dll                    ← OpenCV（须在 exe 同目录，Windows 启动器要求）
+libgcc_s_seh-1.dll                 ← MinGW 运行时（同上）
 libstdc++-6.dll
 libwinpthread-1.dll
 runtime/
-  opencv/       libopencv_*.dll
+  opencv/       libopencv_*.dll（备份）
   mingw/        MinGW 运行时（备份）
   dm/           dm.dll, DmReg.dll
   dmcapture.exe 大漠 sidecar（386）
@@ -35,9 +36,9 @@ runtime/
 
 说明：
 
+- Release 页面会同时提供 **散文件** 和 **zip**（zip 仅供程序内自动更新）。
 - zip 内 **不会再套一层 zip**，也不会包含 `tlbb-game-screen-monitor.exe` 等多余文件。
-- 根目录 3 个 MinGW DLL 是 Windows 加载 exe 时的硬性要求，不能只在 `runtime/mingw/` 里。
-- OpenCV DLL 放在 `runtime/opencv/`，程序启动后会自动加入搜索路径。
+- **OpenCV 与 MinGW 的 DLL 必须放在 exe 同目录**；Windows 在 Go 代码运行前就会加载这些依赖，`runtime/opencv/` 里的备份无法替代。
 
 大漠插件构建时从 [xxxxue/xDM](https://github.com/xxxxue/xDM) 自动下载，**不进 Git 仓库**。
 
@@ -92,4 +93,4 @@ Windows 打包：
 
 - 游戏 **最小化** 后多数无法继续出图，监控不可靠
 - 部分游戏可能检测大漠绑定，请自行评估风险
-- 自动更新优先下载 **zip** 包并解压覆盖 `runtime/`
+- 自动更新优先下载 **zip** 包并解压覆盖当前目录（含 exe、全部 DLL、`runtime/`）

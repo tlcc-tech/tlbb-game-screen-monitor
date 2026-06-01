@@ -31,5 +31,5 @@ Copy-Item -Force "build/bin/tlbb-game-screen-monitor.exe" "build/bin/游戏掉�
 & "$PSScriptRoot/copy-runtime-dlls.ps1"
 & "$PSScriptRoot/package-release.ps1"
 
-Write-Host "Build output is under build/bin/"
+Write-Host "Build output: build/release/ (exe + DLLs + runtime/)"
 Write-Host "Release zip: build/游戏掉线监控-windows-amd64.zip"
