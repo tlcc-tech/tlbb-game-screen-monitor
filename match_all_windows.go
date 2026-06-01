@@ -51,7 +51,15 @@ func (m *Monitor) matchAll(screen image.Image) []MatchScore {
 
 func imageToGrayMat(img image.Image) (gocv.Mat, error) {
 	gray := gocv.NewMat()
-	mat, err := gocv.ImageToMat(img)
+
+	var mat gocv.Mat
+	var err error
+	switch typed := img.(type) {
+	case *image.Gray:
+		mat, err = gocv.ImageGrayToMatGray(typed)
+	default:
+		mat, err = gocv.ImageToMatRGBA(img)
+	}
 	if err != nil {
 		gray.Close()
 		return gray, err
@@ -85,5 +93,5 @@ func matchTemplateScore(screenGray gocv.Mat, tplGray gocv.Mat) (float64, bool, e
 
 	gocv.MatchTemplate(screenGray, tplGray, &result, gocv.TmCcoeffNormed, mask)
 	_, maxVal, _, _ := gocv.MinMaxLoc(result)
-	return maxVal, true, nil
+	return float64(maxVal), true, nil
 }
