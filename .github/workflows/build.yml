@@ -46,41 +46,47 @@ jobs:
           fi
           echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
 
+      - name: Restore cached OpenCV install
+        uses: actions/cache/restore@v4
+        id: cache-opencv-install
+        with:
+          path: opencv/build/install
+          key: opencv-install-mingw-4110-slim-v2
+          restore-keys: |
+            opencv-install-mingw-4110-slim-
+
       - name: Restore cached OpenCV source
         uses: actions/cache/restore@v4
         id: cache-opencv-source
         with:
-          key: opencv-source-4110-game-monitor-v1
-          path: |
-            opencv/opencv-4.11.0
-            opencv/opencv_contrib-4.11.0
+          path: opencv/opencv-4.11.0
+          key: opencv-source-4110-slim-v2
+          restore-keys: |
+            opencv-source-4110-slim-
 
-      - name: Restore cached OpenCV build
-        uses: actions/cache/restore@v4
-        id: cache-opencv-build
-        with:
-          key: opencv-build-4110-game-monitor-v1
-          path: opencv/build
+      - name: OpenCV cache status
+        shell: pwsh
+        run: |
+          Write-Host "install cache hit: ${{ steps.cache-opencv-install.outputs.cache-hit }}"
+          Write-Host "source cache hit:  ${{ steps.cache-opencv-source.outputs.cache-hit }}"
 
       - name: Install OpenCV
         shell: pwsh
         run: ./scripts/setup-opencv.ps1
 
+      - name: Save cached OpenCV install
+        if: steps.cache-opencv-install.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: opencv/build/install
+          key: opencv-install-mingw-4110-slim-v2
+
       - name: Save cached OpenCV source
         if: steps.cache-opencv-source.outputs.cache-hit != 'true'
         uses: actions/cache/save@v4
         with:
-          key: opencv-source-4110-game-monitor-v1
-          path: |
-            opencv/opencv-4.11.0
-            opencv/opencv_contrib-4.11.0
-
-      - name: Save cached OpenCV build
-        if: steps.cache-opencv-build.outputs.cache-hit != 'true'
-        uses: actions/cache/save@v4
-        with:
-          key: opencv-build-4110-game-monitor-v1
-          path: opencv/build
+          path: opencv/opencv-4.11.0
+          key: opencv-source-4110-slim-v2
 
       - name: Build (Windows)
         shell: pwsh
