@@ -11,7 +11,7 @@ if ($match -and $match.Matches.Count -gt 0) {
 	$Version = $match.Matches[0].Groups[1].Value
 }
 
-wails build -platform windows/amd64 -clean -tags customenv -ldflags "-X main.AppVersion=$Version"
+wails build -platform windows/amd64 -clean -ldflags "-X main.AppVersion=$Version"
 Copy-Item -Force "build/bin/tlbb-game-screen-monitor.exe" "build/bin/游戏掉线监控-windows-amd64.exe"
 
 & "$PSScriptRoot/copy-runtime-dlls.ps1"

@@ -51,18 +51,20 @@ jobs:
         id: cache-opencv-install
         with:
           path: opencv/build/install
-          key: opencv-install-mingw-4110-slim-v2
+          key: opencv-install-mingw-4110-gocv-v3
           restore-keys: |
-            opencv-install-mingw-4110-slim-
+            opencv-install-mingw-4110-gocv-
 
       - name: Restore cached OpenCV source
         uses: actions/cache/restore@v4
         id: cache-opencv-source
         with:
-          path: opencv/opencv-4.11.0
-          key: opencv-source-4110-slim-v2
+          path: |
+            opencv/opencv-4.11.0
+            opencv/opencv_contrib-4.11.0
+          key: opencv-source-4110-gocv-v3
           restore-keys: |
-            opencv-source-4110-slim-
+            opencv-source-4110-gocv-
 
       - name: OpenCV cache status
         shell: pwsh
@@ -79,19 +81,22 @@ jobs:
         uses: actions/cache/save@v4
         with:
           path: opencv/build/install
-          key: opencv-install-mingw-4110-slim-v2
+          key: opencv-install-mingw-4110-gocv-v3
 
       - name: Save cached OpenCV source
         if: steps.cache-opencv-source.outputs.cache-hit != 'true'
         uses: actions/cache/save@v4
         with:
-          path: opencv/opencv-4.11.0
-          key: opencv-source-4110-slim-v2
+          path: |
+            opencv/opencv-4.11.0
+            opencv/opencv_contrib-4.11.0
+          key: opencv-source-4110-gocv-v3
 
       - name: Build (Windows)
         shell: pwsh
         run: |
-          wails build -platform windows/amd64 -clean -tags customenv -ldflags "-X main.AppVersion=${{ steps.ver.outputs.version }}"
+          $ErrorActionPreference = 'Stop'
+          wails build -platform windows/amd64 -clean -ldflags "-X main.AppVersion=${{ steps.ver.outputs.version }}"
           Copy-Item -Force "build/bin/tlbb-game-screen-monitor.exe" "build/bin/游戏掉线监控-windows-amd64.exe"
           ./scripts/copy-runtime-dlls.ps1
 

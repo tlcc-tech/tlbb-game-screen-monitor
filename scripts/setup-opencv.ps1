@@ -1,5 +1,6 @@
-# Builds a slim OpenCV 4.11 (core+imgproc+imgcodecs) for gocv MatchTemplate.
+# Builds OpenCV 4.11 + contrib for gocv on Windows.
 # Skips compile when opencv/build/install already exists (CI cache restore).
+# Creates C:\opencv\build\install junction so gocv default cgo paths work (no customenv).
 
 param(
     [string]$RepoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
@@ -11,13 +12,7 @@ $opencvRoot = Join-Path $RepoRoot "opencv"
 $opencvBuild = Join-Path $opencvRoot "build"
 $opencvInstall = Join-Path $opencvBuild "install"
 $opencvBin = Join-Path $opencvInstall "x64/mingw/bin"
-$opencvInclude = Join-Path $opencvInstall "include"
-$opencvLib = Join-Path $opencvInstall "x64/mingw/lib"
 $opencvVersion = "4.11.0"
-
-# Modules required for MatchTemplate + CvtColor + ImageToMatRGBA
-$opencvModules = @("core", "imgproc", "imgcodecs")
-$opencvLibs = @("opencv_core4110", "opencv_imgproc4110", "opencv_imgcodecs4110")
 
 function Test-OpenCVReady {
     $msvcDll = Join-Path $opencvBin "opencv_core4110.dll"
@@ -25,90 +20,115 @@ function Test-OpenCVReady {
     return (Test-Path $msvcDll) -or (Test-Path $mingwDll)
 }
 
-function Set-OpenCVBuildEnv {
-    $ldflags = "-L$opencvLib " + (($opencvLibs | ForEach-Object { "-l$_" }) -join " ")
-    $env:CGO_ENABLED = "1"
-    $env:CGO_CXXFLAGS = "--std=c++11"
-    $env:CGO_CPPFLAGS = "-I$opencvInclude"
-    $env:CGO_LDFLAGS = $ldflags
-    if ($env:PATH -notlike "*$opencvBin*") {
-        $env:PATH = "$opencvBin;$env:PATH"
-    }
-
-    if ($env:GITHUB_ENV) {
-        Add-Content -Path $env:GITHUB_ENV -Value "CGO_ENABLED=1"
-        Add-Content -Path $env:GITHUB_ENV -Value "CGO_CXXFLAGS=--std=c++11"
-        Add-Content -Path $env:GITHUB_ENV -Value "CGO_CPPFLAGS=-I$opencvInclude"
-        Add-Content -Path $env:GITHUB_ENV -Value "CGO_LDFLAGS=$ldflags"
-        Add-Content -Path $env:GITHUB_PATH -Value $opencvBin
-    }
-
-    Write-Host "OpenCV build env ready:"
-    Write-Host "  include: $opencvInclude"
-    Write-Host "  lib:     $opencvLib"
-    Write-Host "  bin:     $opencvBin"
-}
-
 function Ensure-OpenCVSources {
     $srcDir = Join-Path $opencvRoot "opencv-$opencvVersion"
-    if (Test-Path $srcDir) {
+    $contribDir = Join-Path $opencvRoot "opencv_contrib-$opencvVersion"
+    if ((Test-Path $srcDir) -and (Test-Path $contribDir)) {
         return
     }
 
     New-Item -ItemType Directory -Force -Path $opencvRoot | Out-Null
     $srcZip = Join-Path $opencvRoot "opencv-$opencvVersion.zip"
+    $contribZip = Join-Path $opencvRoot "opencv_contrib-$opencvVersion.zip"
 
     if (-not (Test-Path $srcZip)) {
         Write-Host "Downloading OpenCV $opencvVersion source..."
         Invoke-WebRequest -Uri "https://github.com/opencv/opencv/archive/$opencvVersion.zip" -OutFile $srcZip
     }
+    if (-not (Test-Path $contribZip)) {
+        Write-Host "Downloading OpenCV contrib $opencvVersion source..."
+        Invoke-WebRequest -Uri "https://github.com/opencv/opencv_contrib/archive/$opencvVersion.zip" -OutFile $contribZip
+    }
 
-    Write-Host "Extracting OpenCV source..."
-    Expand-Archive -Path $srcZip -DestinationPath $opencvRoot -Force
+    if (-not (Test-Path $srcDir)) {
+        Write-Host "Extracting OpenCV source..."
+        Expand-Archive -Path $srcZip -DestinationPath $opencvRoot -Force
+    }
+    if (-not (Test-Path $contribDir)) {
+        Write-Host "Extracting OpenCV contrib source..."
+        Expand-Archive -Path $contribZip -DestinationPath $opencvRoot -Force
+    }
 }
 
 function Build-OpenCV {
     Ensure-OpenCVSources
 
     $srcDir = Join-Path $opencvRoot "opencv-$opencvVersion"
+    $contribDir = Join-Path $opencvRoot "opencv_contrib-$opencvVersion"
     New-Item -ItemType Directory -Force -Path $opencvBuild | Out-Null
-
-    $buildList = ($opencvModules -join ",")
 
     Push-Location $opencvBuild
     try {
-        Write-Host "Configuring slim OpenCV (BUILD_LIST=$buildList)..."
-        cmake -G "MinGW Makefiles" `
-            -DENABLE_CXX11=ON `
-            -DBUILD_LIST="$buildList" `
-            -DBUILD_SHARED_LIBS=ON `
-            -DWITH_IPP=OFF `
-            -DWITH_MSMF=OFF `
-            -DWITH_FFMPEG=OFF `
-            -DWITH_JPEG=ON `
-            -DWITH_PNG=ON `
-            -DBUILD_EXAMPLES=OFF `
-            -DBUILD_TESTS=OFF `
-            -DBUILD_PERF_TESTS=OFF `
-            -DBUILD_opencv_apps=OFF `
-            -DBUILD_opencv_java=OFF `
-            -DBUILD_opencv_python=OFF `
-            -DBUILD_opencv_python2=OFF `
-            -DBUILD_opencv_python3=OFF `
-            -DBUILD_DOCS=OFF `
-            -DENABLE_PRECOMPILED_HEADERS=OFF `
-            -DCPU_DISPATCH= `
-            -DWITH_OPENCL=OFF `
-            -DWITH_OPENCL_D3D11_NV=OFF `
-            -DOPENCV_ALLOCATOR_STATS_COUNTER_TYPE=int64_t `
-            -Wno-dev `
-            $srcDir
+        if (-not (Test-Path "CMakeCache.txt")) {
+            Write-Host "Configuring OpenCV with CMake..."
+            cmake -G "MinGW Makefiles" `
+                -DENABLE_CXX11=ON `
+                -DOPENCV_EXTRA_MODULES_PATH="$contribDir/modules" `
+                -DBUILD_SHARED_LIBS=ON `
+                -DWITH_IPP=OFF `
+                -DWITH_MSMF=OFF `
+                -DBUILD_EXAMPLES=OFF `
+                -DBUILD_TESTS=OFF `
+                -DBUILD_PERF_TESTS=OFF `
+                -DBUILD_opencv_java=OFF `
+                -DBUILD_opencv_python=OFF `
+                -DBUILD_opencv_python2=OFF `
+                -DBUILD_opencv_python3=OFF `
+                -DBUILD_DOCS=OFF `
+                -DBUILD_opencv_apps=OFF `
+                -DENABLE_PRECOMPILED_HEADERS=OFF `
+                -DBUILD_opencv_saliency=OFF `
+                -DBUILD_opencv_wechat_qrcode=ON `
+                -DCPU_DISPATCH= `
+                -DOPENCV_GENERATE_PKGCONFIG=ON `
+                -DWITH_OPENCL_D3D11_NV=OFF `
+                -DOPENCV_ALLOCATOR_STATS_COUNTER_TYPE=int64_t `
+                -DOPENCV_ENABLE_NONFREE=ON `
+                -Wno-dev `
+                $srcDir
+        } else {
+            Write-Host "Reusing existing CMake cache in $opencvBuild"
+        }
 
         Write-Host "Building and installing OpenCV..."
         cmake --build . --target install -j $env:NUMBER_OF_PROCESSORS
     } finally {
         Pop-Location
     }
+}
+
+function Ensure-GocvOpenCVPath {
+    # gocv v0.41 default cgo expects C:/opencv/build/install
+    $linkParent = "C:\opencv\build"
+    $linkPath = Join-Path $linkParent "install"
+    $target = (Resolve-Path $opencvInstall).Path
+
+    New-Item -ItemType Directory -Force -Path $linkParent | Out-Null
+    if (Test-Path $linkPath) {
+        $item = Get-Item $linkPath -Force
+        if ($item.Attributes -band [IO.FileAttributes]::ReparsePoint) {
+            if ($item.Target -contains $target -or $item.Target -eq $target) {
+                Write-Host "gocv OpenCV junction already set: $linkPath -> $target"
+                return
+            }
+            Remove-Item $linkPath -Force
+        } else {
+            Remove-Item $linkPath -Force -Recurse
+        }
+    }
+
+    New-Item -ItemType Junction -Path $linkPath -Target $target | Out-Null
+    Write-Host "Linked gocv OpenCV path: $linkPath -> $target"
+}
+
+function Set-OpenCVRuntimePath {
+    if ($env:PATH -notlike "*$opencvBin*") {
+        $env:PATH = "$opencvBin;$env:PATH"
+    }
+    if ($env:GITHUB_PATH) {
+        Add-Content -Path $env:GITHUB_PATH -Value $opencvBin
+    }
+    Write-Host "OpenCV bin on PATH: $opencvBin"
 }
 
 if (Test-OpenCVReady) {
@@ -121,4 +141,5 @@ if (Test-OpenCVReady) {
     Write-Host "OpenCV build complete: $opencvBin"
 }
 
-Set-OpenCVBuildEnv
+Ensure-GocvOpenCVPath
+Set-OpenCVRuntimePath
