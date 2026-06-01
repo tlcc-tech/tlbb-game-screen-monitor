@@ -34,9 +34,9 @@ if ($dllCount -lt 4) {
     throw "Too few DLLs in release dir ($dllCount). OpenCV copy may have failed."
 }
 
-$zipOut = Join-Path $RepoRoot "build/游戏掉线监控-windows-amd64.zip"
+$zipOut = Join-Path $releaseDir "游戏掉线监控-windows-amd64.zip"
 Remove-Item -Force $zipOut -ErrorAction SilentlyContinue
 Compress-Archive -Path (Join-Path $releaseDir "*") -DestinationPath $zipOut -Force
 
-Write-Host "Release folder: $releaseDir ($dllCount DLLs + exe + runtime/)"
-Write-Host "Release zip (for auto-update): $zipOut"
+Write-Host "Release folder: $releaseDir ($dllCount DLLs + exe + runtime/ + zip)"
+Write-Host "Release zip: $zipOut"

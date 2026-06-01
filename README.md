@@ -19,7 +19,7 @@ Windows 桌面工具：绑定游戏窗口截图 + OpenCV 模板匹配，检测�
 
 ## 安装与目录
 
-从 GitHub **Releases** 下载 **`游戏掉线监控-windows-amd64.exe`** 及同目录下的全部 `.dll` 文件（也可下载 zip 解压）。GitHub Actions 的 **windows-build** 产物已是解压后的目录结构，无需再套一层 zip。
+从 GitHub **Releases** 下载 **`游戏掉线监控-windows-amd64.zip`** 并解压。GitHub Actions 的 **windows-build** 产物是已解压的散文件（exe + DLL + `runtime/`），可直接使用。
 
 ```
 游戏掉线监控-windows-amd64.exe    ← 主程序
@@ -36,7 +36,7 @@ runtime/
 
 说明：
 
-- Release 页面会同时提供 **散文件** 和 **zip**（zip 仅供程序内自动更新）。
+- Release 页面提供 **zip**（解压后与 Actions 散文件布局一致）；程序内自动更新也使用该 zip。
 - zip 内 **不会再套一层 zip**，也不会包含 `tlbb-game-screen-monitor.exe` 等多余文件。
 - **OpenCV 与 MinGW 的 DLL 必须放在 exe 同目录**；Windows 在 Go 代码运行前就会加载这些依赖，`runtime/opencv/` 里的备份无法替代。
 
