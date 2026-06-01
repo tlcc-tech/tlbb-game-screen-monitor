@@ -9,7 +9,7 @@ import (
 	"unsafe"
 )
 
-func initRuntimeDLLPaths() {
+func init() {
 	exe, err := os.Executable()
 	if err != nil {
 		return
@@ -18,7 +18,19 @@ func initRuntimeDLLPaths() {
 	dirs := []string{
 		filepath.Join(base, "opencv"),
 		filepath.Join(base, "mingw"),
+		base,
 	}
+
+	// Help LoadLibrary find OpenCV and dependencies after process start.
+	path := os.Getenv("PATH")
+	for i := len(dirs) - 1; i >= 0; i-- {
+		if st, err := os.Stat(dirs[i]); err != nil || !st.IsDir() {
+			continue
+		}
+		path = dirs[i] + ";" + path
+	}
+	_ = os.Setenv("PATH", path)
+
 	kernel32 := syscall.NewLazyDLL("kernel32.dll")
 	addDllDirectory := kernel32.NewProc("AddDllDirectory")
 	setDefaultDllDirectories := kernel32.NewProc("SetDefaultDllDirectories")

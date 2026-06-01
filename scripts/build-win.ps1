@@ -29,10 +29,7 @@ wails build -platform windows/amd64 -clean -ldflags "-X main.AppVersion=$Version
 Copy-Item -Force "build/bin/tlbb-game-screen-monitor.exe" "build/bin/游戏掉线监控-windows-amd64.exe"
 
 & "$PSScriptRoot/copy-runtime-dlls.ps1"
-
-$zipPath = Join-Path (Resolve-Path "build/bin") "游戏掉线监控-windows-amd64.zip"
-if (Test-Path $zipPath) { Remove-Item -Force $zipPath }
-Compress-Archive -Path "build/bin/*" -DestinationPath $zipPath -Force
+& "$PSScriptRoot/package-release.ps1"
 
 Write-Host "Build output is under build/bin/"
-Write-Host "Zip: $zipPath"
+Write-Host "Release zip: build/游戏掉线监控-windows-amd64.zip"

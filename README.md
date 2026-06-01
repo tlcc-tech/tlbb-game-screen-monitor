@@ -19,16 +19,25 @@ Windows 桌面工具：绑定游戏窗口截图 + OpenCV 模板匹配，检测�
 
 ## 安装与目录
 
-从 Release 下载 **`游戏掉线监控-windows-amd64.zip`** 并解压：
+从 GitHub **Releases** 下载 **`游戏掉线监控-windows-amd64.zip`**（不要下 Actions 里的 artifacts 文件夹），解压到任意目录：
 
 ```
-游戏掉线监控-windows-amd64.exe    ← 唯一入口
+游戏掉线监控-windows-amd64.exe    ← 主程序
+libgcc_s_seh-1.dll                 ← MinGW 运行时（须在 exe 同目录，Windows 启动器要求）
+libstdc++-6.dll
+libwinpthread-1.dll
 runtime/
   opencv/       libopencv_*.dll
-  mingw/        MinGW 运行时
+  mingw/        MinGW 运行时（备份）
   dm/           dm.dll, DmReg.dll
   dmcapture.exe 大漠 sidecar（386）
 ```
+
+说明：
+
+- zip 内 **不会再套一层 zip**，也不会包含 `tlbb-game-screen-monitor.exe` 等多余文件。
+- 根目录 3 个 MinGW DLL 是 Windows 加载 exe 时的硬性要求，不能只在 `runtime/mingw/` 里。
+- OpenCV DLL 放在 `runtime/opencv/`，程序启动后会自动加入搜索路径。
 
 大漠插件构建时从 [xxxxue/xDM](https://github.com/xxxxue/xDM) 自动下载，**不进 Git 仓库**。
 
