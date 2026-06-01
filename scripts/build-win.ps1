@@ -14,11 +14,6 @@ if ($match -and $match.Matches.Count -gt 0) {
 wails build -platform windows/amd64 -clean -tags customenv -ldflags "-X main.AppVersion=$Version"
 Copy-Item -Force "build/bin/tlbb-game-screen-monitor.exe" "build/bin/游戏掉线监控-windows-amd64.exe"
 
-$opencvBin = Join-Path $PSScriptRoot "..\opencv\build\install\x64\mingw\bin"
-if (Test-Path $opencvBin) {
-    Copy-Item -Force "$opencvBin\libopencv_*.dll" "build/bin/" -ErrorAction SilentlyContinue
-    Copy-Item -Force "$opencvBin\opencv_*.dll" "build/bin/" -ErrorAction SilentlyContinue
-    Write-Host "Copied OpenCV DLLs to build/bin/"
-}
+& "$PSScriptRoot/copy-runtime-dlls.ps1"
 
 Write-Host "Build output is under build/bin/"
