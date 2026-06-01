@@ -92,7 +92,7 @@ jobs:
             opencv/opencv_contrib-4.11.0
           key: opencv-source-4110-gocv-v3
 
-      - name: Fetch DM plugin
+      - name: Verify DM plugin
         shell: pwsh
         run: ./scripts/fetch-dm.ps1
 

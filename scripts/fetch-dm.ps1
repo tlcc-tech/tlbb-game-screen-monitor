@@ -1,5 +1,5 @@
-# Downloads dm.dll and DmReg.dll from xxxxue/xDM.
-# Output: third_party/dm/
+# Ensures dm.dll and DmReg.dll exist in third_party/dm/.
+# Files are vendored in the repo; download only as fallback when missing.
 
 $ErrorActionPreference = "Stop"
 
@@ -9,6 +9,25 @@ $OutDir = [System.IO.Path]::GetFullPath($OutDir)
 New-Item -ItemType Directory -Force -Path $OutDir | Out-Null
 
 $Files = @("dm.dll", "DmReg.dll")
+$allPresent = $true
+foreach ($name in $Files) {
+    $dest = Join-Path $OutDir $name
+    if (-not (Test-Path $dest) -or (Get-Item $dest).Length -lt 1024) {
+        $allPresent = $false
+        break
+    }
+}
+
+if ($allPresent) {
+    Write-Host "DM files already present in $OutDir (using vendored copies)"
+    foreach ($name in $Files) {
+        $dest = Join-Path $OutDir $name
+        Write-Host "  -> $dest ($((Get-Item $dest).Length) bytes)"
+    }
+    exit 0
+}
+
+Write-Host "Vendored DM files missing; downloading from xxxxue/xDM ..."
 foreach ($name in $Files) {
     $url = "$BaseUrl/$name"
     $dest = Join-Path $OutDir $name

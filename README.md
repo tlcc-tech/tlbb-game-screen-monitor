@@ -40,7 +40,7 @@ runtime/
 - zip 内 **不会再套一层 zip**，也不会包含 `tlbb-game-screen-monitor.exe` 等多余文件。
 - **OpenCV 与 MinGW 的 DLL 必须放在 exe 同目录**；Windows 在 Go 代码运行前就会加载这些依赖，`runtime/opencv/` 里的备份无法替代。
 
-大漠插件构建时从 [xxxxue/xDM](https://github.com/xxxxue/xDM) 自动下载，**不进 Git 仓库**。
+大漠插件文件已随仓库提供（`third_party/dm/`），构建时无需再从 GitHub 下载。来源：[xxxxue/xDM](https://github.com/xxxxue/xDM)。
 
 ## 使用流程
 

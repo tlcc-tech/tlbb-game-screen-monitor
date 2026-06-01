@@ -1,7 +1,6 @@
 build/bin/
 build/release/
 opencv/
-third_party/dm/
 tlbb-game-screen-monitor
 *.exe
 build/dmg/
