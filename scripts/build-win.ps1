@@ -7,6 +7,9 @@ $ErrorActionPreference = "Stop"
 
 Set-Location (Join-Path $PSScriptRoot ".." "frontend")
 npm ci
+Set-Location (Join-Path $PSScriptRoot "..")
+wails generate module
+Set-Location (Join-Path $PSScriptRoot ".." "frontend")
 npm run build
 Set-Location (Join-Path $PSScriptRoot "..")
 

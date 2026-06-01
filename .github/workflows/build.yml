@@ -56,7 +56,11 @@ jobs:
           $ErrorActionPreference = 'Stop'
           Set-Location frontend
           npm ci
+          Set-Location ..
+          wails generate module
+          Set-Location frontend
           npm run build
+          Set-Location ..
 
       - name: Build dmfindpic sidecar (386)
         shell: pwsh
