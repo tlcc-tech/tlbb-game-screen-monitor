@@ -16,7 +16,7 @@ export function GetStatus():Promise<main.MonitorStatus>;
 
 export function GetTemplateThumbnailBase64(arg1:string):Promise<string>;
 
-export function ImportTemplate(arg1:string, arg2:number):Promise<main.TemplateItem>;
+export function ImportTemplate(arg1:string,arg2:number):Promise<main.TemplateItem>;
 
 export function ListTemplates():Promise<Array<main.TemplateItem>>;
 
@@ -26,9 +26,9 @@ export function QuitApp():Promise<void>;
 
 export function SaveSettings(arg1:main.AppSettings):Promise<void>;
 
-export function SaveTemplate(arg1:string, arg2:string, arg3:number):Promise<main.TemplateItem>;
+export function SaveTemplate(arg1:string,arg2:string,arg3:number):Promise<main.TemplateItem>;
 
-export function StartMonitoring(arg1:string, arg2:main.AppSettings):Promise<void>;
+export function StartMonitoring(arg1:string,arg2:main.AppSettings):Promise<void>;
 
 export function StopMonitoring():Promise<void>;
 

@@ -15,13 +15,14 @@ func main() {
 	app := NewApp()
 
 	err := wails.Run(&options.App{
-		Title:  AppName,
-		Width:  1100,
-		Height: 920,
+		Title:         AppName,
+		Width:         860,
+		Height:        680,
+		DisableResize: true,
 		AssetServer: &assetserver.Options{
 			Assets: assets,
 		},
-		BackgroundColour: &options.RGBA{R: 27, G: 38, B: 54, A: 1},
+		BackgroundColour: &options.RGBA{R: 255, G: 251, B: 235, A: 1},
 		OnStartup:        app.startup,
 		OnBeforeClose:    app.beforeClose,
 		Bind: []interface{}{

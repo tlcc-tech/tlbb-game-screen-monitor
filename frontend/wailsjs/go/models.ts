@@ -4,6 +4,7 @@ export namespace main {
 	    name: string;
 	    author: string;
 	    version: string;
+	    repoUrl: string;
 	
 	    static createFrom(source: any = {}) {
 	        return new AppInfo(source);
@@ -14,6 +15,27 @@ export namespace main {
 	        this.name = source["name"];
 	        this.author = source["author"];
 	        this.version = source["version"];
+	        this.repoUrl = source["repoUrl"];
+	    }
+	}
+	export class TemplateItem {
+	    id: string;
+	    name: string;
+	    file: string;
+	    threshold: number;
+	    enabled: boolean;
+	
+	    static createFrom(source: any = {}) {
+	        return new TemplateItem(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.id = source["id"];
+	        this.name = source["name"];
+	        this.file = source["file"];
+	        this.threshold = source["threshold"];
+	        this.enabled = source["enabled"];
 	    }
 	}
 	export class AppSettings {
@@ -60,8 +82,8 @@ export namespace main {
 		    if (!a) {
 		        return a;
 		    }
-		    if (a.slice) {
-		        return (a as any[]).map(elem => new classs(elem));
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
 		    } else if ("object" === typeof a) {
 		        if (asMap) {
 		            for (const key of Object.keys(a)) {
@@ -130,8 +152,8 @@ export namespace main {
 		    if (!a) {
 		        return a;
 		    }
-		    if (a.slice) {
-		        return (a as any[]).map(elem => new classs(elem));
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
 		    } else if ("object" === typeof a) {
 		        if (asMap) {
 		            for (const key of Object.keys(a)) {
@@ -144,26 +166,7 @@ export namespace main {
 		    return a;
 		}
 	}
-	export class TemplateItem {
-	    id: string;
-	    name: string;
-	    file: string;
-	    threshold: number;
-	    enabled: boolean;
 	
-	    static createFrom(source: any = {}) {
-	        return new TemplateItem(source);
-	    }
-	
-	    constructor(source: any = {}) {
-	        if ('string' === typeof source) source = JSON.parse(source);
-	        this.id = source["id"];
-	        this.name = source["name"];
-	        this.file = source["file"];
-	        this.threshold = source["threshold"];
-	        this.enabled = source["enabled"];
-	    }
-	}
 	export class WindowInfo {
 	    hwnd: number;
 	    title: string;
@@ -182,3 +185,4 @@ export namespace main {
 	}
 
 }
+

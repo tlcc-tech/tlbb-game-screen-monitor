@@ -166,7 +166,12 @@ func (a *App) ClearGameWindow() error {
 }
 
 func (a *App) GetAppInfo() AppInfo {
-	return AppInfo{Name: AppName, Author: AppAuthor, Version: AppVersion}
+	return AppInfo{
+		Name:    AppName,
+		Author:  AppAuthor,
+		Version: AppVersion,
+		RepoURL: "https://github.com/" + UpdateRepoOwner + "/" + UpdateRepoName,
+	}
 }
 
 func errNotReady() error {

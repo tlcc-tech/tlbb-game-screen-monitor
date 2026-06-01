@@ -1,9 +1,9 @@
 package main
 
-var AppVersion = "1.3.3"
+var AppVersion = "1.4.0"
 
 const (
-	AppName   = "游戏掉线监控"
+	AppName   = "怀旧天龙CC科技"
 	AppAuthor = "怀旧天龙CC科技"
 
 	UpdateRepoOwner = "tlcc-tech"
@@ -14,4 +14,5 @@ type AppInfo struct {
 	Name    string `json:"name"`
 	Author  string `json:"author"`
 	Version string `json:"version"`
+	RepoURL string `json:"repoUrl"`
 }
