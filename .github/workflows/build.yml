@@ -50,6 +50,14 @@ jobs:
         shell: pwsh
         run: ./scripts/fetch-dm.ps1
 
+      - name: Build frontend
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          Set-Location frontend
+          npm ci
+          npm run build
+
       - name: Build dmfindpic sidecar (386)
         shell: pwsh
         run: |

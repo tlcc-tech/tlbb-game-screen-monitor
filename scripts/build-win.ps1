@@ -5,6 +5,11 @@ $ErrorActionPreference = "Stop"
 
 & "$PSScriptRoot/fetch-dm.ps1"
 
+Set-Location (Join-Path $PSScriptRoot ".." "frontend")
+npm ci
+npm run build
+Set-Location (Join-Path $PSScriptRoot "..")
+
 $Version = "dev"
 $match = Select-String -Path "wails.json" -Pattern '"productVersion"\s*:\s*"([^"]+)"' | Select-Object -First 1
 if ($match -and $match.Matches.Count -gt 0) {
