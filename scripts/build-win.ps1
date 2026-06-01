@@ -6,7 +6,7 @@ $ErrorActionPreference = "Stop"
 & "$PSScriptRoot/setup-opencv.ps1"
 & "$PSScriptRoot/fetch-dm.ps1"
 
-Set-Location (Join-Path $PSScriptRoot ".." "frontend")
+Set-Location (Join-Path (Resolve-Path (Join-Path $PSScriptRoot "..")).Path "frontend")
 npm ci
 npm run build
 Set-Location (Join-Path $PSScriptRoot "..")

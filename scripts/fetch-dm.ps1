@@ -4,7 +4,7 @@
 $ErrorActionPreference = "Stop"
 
 $BaseUrl = "https://raw.githubusercontent.com/xxxxue/xDM/main/C%23%E5%A4%A7%E6%BC%A0%E5%85%8D%E6%B3%A8%E5%86%8C(%E4%BD%BF%E7%94%A8DmReg.dll)/dll"
-$OutDir = Join-Path $PSScriptRoot ".." "third_party" "dm"
+$OutDir = Join-Path (Resolve-Path (Join-Path $PSScriptRoot "..")).Path "third_party\dm"
 $OutDir = [System.IO.Path]::GetFullPath($OutDir)
 New-Item -ItemType Directory -Force -Path $OutDir | Out-Null
 

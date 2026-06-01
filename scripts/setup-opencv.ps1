@@ -80,7 +80,7 @@ function Build-OpenCV {
                 -DBUILD_opencv_saliency=OFF `
                 -DBUILD_opencv_wechat_qrcode=ON `
                 -DCPU_DISPATCH= `
-                -DOPENCV_GENERATE_PKGCONFIG=ON `
+                -DOPENCV_GENERATE_PKGCONFIG=OFF `
                 -DWITH_OPENCL_D3D11_NV=OFF `
                 -DOPENCV_ALLOCATOR_STATS_COUNTER_TYPE=int64_t `
                 -DOPENCV_ENABLE_NONFREE=ON `
