@@ -84,3 +84,53 @@ func getWindowRect(hwnd windows.HWND) (rect, error) {
 	}
 	return r, nil
 }
+
+func findGameWindowRect(titleSubstring string) (rect, error) {
+	titleSubstring = strings.TrimSpace(titleSubstring)
+	if titleSubstring == "" {
+		return rect{}, errors.New("窗口标题为空")
+	}
+
+	var foundHWND windows.HWND
+	cb := syscall.NewCallback(func(hwnd uintptr, lParam uintptr) uintptr {
+		if !isWindowVisible(windows.HWND(hwnd)) {
+			return 1
+		}
+		title := getWindowText(windows.HWND(hwnd))
+		if title == "" {
+			return 1
+		}
+		if strings.Contains(title, titleSubstring) {
+			foundHWND = windows.HWND(hwnd)
+			return 0
+		}
+		return 1
+	})
+
+	procEnumWindows.Call(cb, 0)
+	if foundHWND == 0 {
+		return rect{}, errors.New("未找到匹配的游戏窗口: " + titleSubstring)
+	}
+	return getWindowRect(foundHWND)
+}
+
+func getSearchRect(gameWindowTitle string) (rect, error) {
+	title := strings.TrimSpace(gameWindowTitle)
+	if title != "" {
+		r, err := findGameWindowRect(title)
+		if err == nil {
+			return r, nil
+		}
+	}
+	n := screenshot.NumActiveDisplays()
+	if n < 1 {
+		return rect{}, errors.New("未检测到显示器")
+	}
+	b := screenshot.GetDisplayBounds(0)
+	return rect{
+		Left:   int32(b.Min.X),
+		Top:    int32(b.Min.Y),
+		Right:  int32(b.Max.X),
+		Bottom: int32(b.Max.Y),
+	}, nil
+}

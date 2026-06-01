@@ -53,6 +53,10 @@ func (m *Monitor) SaveTemplate(name string, pngBase64 string, threshold float64)
 	if err := os.WriteFile(path, data, 0o644); err != nil {
 		return TemplateItem{}, err
 	}
+	if err := writeTemplateBMPFromPNG(id, data); err != nil {
+		_ = os.Remove(path)
+		return TemplateItem{}, err
+	}
 
 	if threshold <= 0 || threshold > 1 {
 		threshold = 0.85
@@ -87,6 +91,7 @@ func (m *Monitor) DeleteTemplate(id string) error {
 		return err
 	}
 	_ = os.Remove(path)
+	removeTemplateBMP(id)
 
 	m.mu.Lock()
 	filtered := m.settings.Templates[:0]
@@ -179,7 +184,17 @@ func (m *Monitor) loadTemplateImage(id string) (image.Image, *TemplateItem, erro
 }
 
 func (m *Monitor) TestMatch() ([]MatchScore, error) {
-	screen, err := captureScreen(m.getGameWindowTitle())
+	m.mu.Lock()
+	settings := m.settings
+	m.mu.Unlock()
+
+	if settings.UseDmMatcher && dmFilesExist(settings) {
+		if scores, ok := m.matchAllDM(settings, m.ListTemplates()); ok {
+			return scores, nil
+		}
+	}
+
+	screen, err := captureScreen(settings.GameWindowTitle)
 	if err != nil {
 		return nil, err
 	}

@@ -46,59 +46,25 @@ jobs:
           fi
           echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
 
-      - name: Restore cached OpenCV install
-        uses: actions/cache/restore@v4
-        id: cache-opencv-install
-        with:
-          path: opencv/build/install
-          key: opencv-install-mingw-4110-gocv-v3
-          restore-keys: |
-            opencv-install-mingw-4110-gocv-
+      - name: Fetch DM plugin
+        shell: pwsh
+        run: ./scripts/fetch-dm.ps1
 
-      - name: Restore cached OpenCV source
-        uses: actions/cache/restore@v4
-        id: cache-opencv-source
-        with:
-          path: |
-            opencv/opencv-4.11.0
-            opencv/opencv_contrib-4.11.0
-          key: opencv-source-4110-gocv-v3
-          restore-keys: |
-            opencv-source-4110-gocv-
-
-      - name: OpenCV cache status
+      - name: Build dmfindpic sidecar (386)
         shell: pwsh
         run: |
-          Write-Host "install cache hit: ${{ steps.cache-opencv-install.outputs.cache-hit }}"
-          Write-Host "source cache hit:  ${{ steps.cache-opencv-source.outputs.cache-hit }}"
-
-      - name: Install OpenCV
-        shell: pwsh
-        run: ./scripts/setup-opencv.ps1
-
-      - name: Save cached OpenCV install
-        if: steps.cache-opencv-install.outputs.cache-hit != 'true'
-        uses: actions/cache/save@v4
-        with:
-          path: opencv/build/install
-          key: opencv-install-mingw-4110-gocv-v3
-
-      - name: Save cached OpenCV source
-        if: steps.cache-opencv-source.outputs.cache-hit != 'true'
-        uses: actions/cache/save@v4
-        with:
-          path: |
-            opencv/opencv-4.11.0
-            opencv/opencv_contrib-4.11.0
-          key: opencv-source-4110-gocv-v3
+          $env:GOOS = "windows"
+          $env:GOARCH = "386"
+          go build -o build/bin/dmfindpic.exe ./cmd/dmfindpic
 
       - name: Build (Windows)
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
+          New-Item -ItemType Directory -Force -Path build/bin/dm | Out-Null
+          Copy-Item -Force third_party/dm/* build/bin/dm/
           wails build -platform windows/amd64 -clean -ldflags "-X main.AppVersion=${{ steps.ver.outputs.version }}"
           Copy-Item -Force "build/bin/tlbb-game-screen-monitor.exe" "build/bin/游戏掉线监控-windows-amd64.exe"
-          ./scripts/copy-runtime-dlls.ps1
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v5
@@ -122,6 +88,7 @@ jobs:
           generate_release_notes: true
           files: |
             dist/**/游戏掉线监控-windows-amd64.exe
-            dist/**/*.dll
+            dist/**/dmfindpic.exe
+            dist/**/dm/*.dll
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

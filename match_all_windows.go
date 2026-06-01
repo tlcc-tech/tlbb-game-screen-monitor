@@ -4,21 +4,25 @@ package main
 
 import (
 	"image"
-
-	"gocv.io/x/gocv"
+	"os"
 )
 
 func (m *Monitor) matchAll(screen image.Image) []MatchScore {
-	screenGray, err := imageToGrayMat(screen)
-	if err != nil {
-		return nil
-	}
-	defer screenGray.Close()
-
 	m.mu.Lock()
+	settings := m.settings
 	templates := append([]TemplateItem(nil), m.settings.Templates...)
 	m.mu.Unlock()
 
+	if settings.UseDmMatcher && dmFilesExist(settings) {
+		if scores, ok := m.matchAllDM(settings, templates); ok {
+			return scores
+		}
+	}
+	return m.matchAllLookup(screen, templates)
+}
+
+func (m *Monitor) matchAllLookup(screen image.Image, templates []TemplateItem) []MatchScore {
+	matcher := LookupMatcher{}
 	var results []MatchScore
 	for _, tpl := range templates {
 		if !tpl.Enabled {
@@ -28,12 +32,7 @@ func (m *Monitor) matchAll(screen image.Image) []MatchScore {
 		if err != nil || item == nil {
 			continue
 		}
-		tplGray, err := imageToGrayMat(img)
-		if err != nil {
-			continue
-		}
-		score, found, err := matchTemplateScore(screenGray, tplGray)
-		tplGray.Close()
+		score, found, err := matcher.Find(screen, img)
 		if err != nil {
 			continue
 		}
@@ -49,49 +48,50 @@ func (m *Monitor) matchAll(screen image.Image) []MatchScore {
 	return results
 }
 
-func imageToGrayMat(img image.Image) (gocv.Mat, error) {
-	gray := gocv.NewMat()
-
-	var mat gocv.Mat
-	var err error
-	switch typed := img.(type) {
-	case *image.Gray:
-		mat, err = gocv.ImageGrayToMatGray(typed)
-	default:
-		mat, err = gocv.ImageToMatRGBA(img)
+func (m *Monitor) matchAllDM(settings AppSettings, templates []TemplateItem) ([]MatchScore, bool) {
+	if err := ensureDMSidecar(settings); err != nil {
+		return nil, false
 	}
+
+	rect, err := getSearchRect(settings.GameWindowTitle)
 	if err != nil {
-		gray.Close()
-		return gray, err
-	}
-	defer mat.Close()
-
-	switch mat.Channels() {
-	case 1:
-		mat.CopyTo(&gray)
-	case 4:
-		gocv.CvtColor(mat, &gray, gocv.ColorBGRAToGray)
-	default:
-		gocv.CvtColor(mat, &gray, gocv.ColorBGRToGray)
-	}
-	return gray, nil
-}
-
-func matchTemplateScore(screenGray gocv.Mat, tplGray gocv.Mat) (float64, bool, error) {
-	if screenGray.Empty() || tplGray.Empty() {
-		return 0, false, nil
-	}
-	if screenGray.Cols() < tplGray.Cols() || screenGray.Rows() < tplGray.Rows() {
-		return 0, false, nil
+		return nil, false
 	}
 
-	result := gocv.NewMat()
-	defer result.Close()
+	var results []MatchScore
+	for _, tpl := range templates {
+		if !tpl.Enabled {
+			continue
+		}
+		bmpName := tpl.ID + ".bmp"
+		bmpPath, err := templateBmpPath(tpl.ID)
+		if err != nil {
+			continue
+		}
+		if _, err := os.Stat(bmpPath); err != nil {
+			continue
+		}
 
-	mask := gocv.NewMat()
-	defer mask.Close()
-
-	gocv.MatchTemplate(screenGray, tplGray, &result, gocv.TmCcoeffNormed, mask)
-	_, maxVal, _, _ := gocv.MinMaxLoc(result)
-	return float64(maxVal), true, nil
+		resp, err := dmFindPic(rect.Left, rect.Top, rect.Right, rect.Bottom, bmpName, tpl.Threshold)
+		if err != nil {
+			return nil, false
+		}
+		score := 0.0
+		found := resp.Found
+		if found {
+			score = resp.Sim
+			if score <= 0 {
+				score = tpl.Threshold
+			}
+		}
+		matched := found && score >= tpl.Threshold
+		results = append(results, MatchScore{
+			TemplateID:   tpl.ID,
+			TemplateName: tpl.Name,
+			Score:        score,
+			Found:        found,
+			Matched:      matched,
+		})
+	}
+	return results, true
 }

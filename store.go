@@ -34,6 +34,9 @@ type AppSettings struct {
 	UseHttp             bool           `json:"useHttp"`
 	GameWindowTitle     string         `json:"gameWindowTitle"`
 	NotifyOnRecover     bool           `json:"notifyOnRecover"`
+	UseDmMatcher        bool           `json:"useDmMatcher"`
+	DmDllPath           string         `json:"dmDllPath"`
+	DmRegDllPath        string         `json:"dmRegDllPath"`
 	Templates           []TemplateItem `json:"templates"`
 }
 
@@ -47,6 +50,7 @@ func defaultSettings() AppSettings {
 		HttpProbeURL:      "https://" + defaultProbeHost,
 		UsePing:           true,
 		UseHttp:           true,
+		UseDmMatcher:      true,
 		Templates:         []TemplateItem{},
 	}
 }

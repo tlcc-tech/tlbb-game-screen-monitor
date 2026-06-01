@@ -1,6 +1,6 @@
 package main
 
-var AppVersion = "1.0.8"
+var AppVersion = "1.1.0"
 
 const (
 	AppName   = "游戏掉线监控"
