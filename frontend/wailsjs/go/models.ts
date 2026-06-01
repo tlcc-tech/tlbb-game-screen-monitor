@@ -124,6 +124,22 @@ export namespace main {
 	        this.matched = source["matched"];
 	    }
 	}
+	export class TemplatePushCooldown {
+	    templateId: string;
+	    templateName: string;
+	    remainingSec: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new TemplatePushCooldown(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.templateId = source["templateId"];
+	        this.templateName = source["templateName"];
+	        this.remainingSec = source["remainingSec"];
+	    }
+	}
 	export class MonitorStatus {
 	    running: boolean;
 	    phase: string;
@@ -133,9 +149,9 @@ export namespace main {
 	    lastChecked: string;
 	    lastError: string;
 	    nextPollIn: number;
-	    hitStreak: number;
 	    pendingPush: boolean;
-	    cooldownRemaining: number;
+	    pendingTemplates: string[];
+	    pushCooldowns: TemplatePushCooldown[];
 	
 	    static createFrom(source: any = {}) {
 	        return new MonitorStatus(source);
@@ -151,9 +167,9 @@ export namespace main {
 	        this.lastChecked = source["lastChecked"];
 	        this.lastError = source["lastError"];
 	        this.nextPollIn = source["nextPollIn"];
-	        this.hitStreak = source["hitStreak"];
 	        this.pendingPush = source["pendingPush"];
-	        this.cooldownRemaining = source["cooldownRemaining"];
+	        this.pendingTemplates = source["pendingTemplates"];
+	        this.pushCooldowns = this.convertValues(source["pushCooldowns"], TemplatePushCooldown);
 	    }
 	
 		convertValues(a: any, classs: any, asMap: boolean = false): any {
@@ -174,6 +190,7 @@ export namespace main {
 		    return a;
 		}
 	}
+	
 	
 	export class WindowInfo {
 	    hwnd: number;

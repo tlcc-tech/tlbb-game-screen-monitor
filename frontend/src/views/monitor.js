@@ -46,6 +46,7 @@ export function createMonitorView(root, log) {
 
             <label class="form-label">推送冷却(分钟)</label>
             <input class="input short" id="pushCooldown" type="number" min="1" max="120" value="10" />
+            <p class="hint span2">各监控项独立计算推送冷却，检测不暂停</p>
 
             <label class="form-check span2"><input type="checkbox" id="notifyOnRecover" /> 掉线画面消失后发「疑似已重连」通知（仅对「掉线」有效）</label>
           </div>
@@ -98,13 +99,20 @@ export function createMonitorView(root, log) {
       idle: "空闲",
       watching: "监控中",
       matched_pending: "等待网络恢复推送",
-      cooldown: "推送冷却",
     };
     let text = `状态：${st.running ? "运行中" : "已停止"} | 阶段：${phaseMap[st.phase] || st.phase}`;
     if (st.nextPollIn > 0) text += ` | 下次检测：${st.nextPollIn}s`;
-    if (st.hitStreak > 0) text += ` | 连续命中：${st.hitStreak}`;
-    if (st.pendingPush) text += " | 待推送";
-    if (st.cooldownRemaining > 0) text += ` | 冷却：${st.cooldownRemaining}s`;
+    if (st.pendingPush && st.pendingTemplates?.length) {
+      text += ` | 待推送：${st.pendingTemplates.join("、")}`;
+    } else if (st.pendingPush) {
+      text += " | 待推送";
+    }
+    if (st.pushCooldowns?.length) {
+      const parts = st.pushCooldowns
+        .map((c) => `${c.templateName}(${c.remainingSec}s)`)
+        .join(" ");
+      text += ` | 推送冷却：${parts}`;
+    }
     if (st.lastMatchedName) text += `\n最近命中：${st.lastMatchedName} (${st.lastMatchedScore?.toFixed(3) || "-"})`;
     if (st.lastScores?.length) {
       const scores = st.lastScores
