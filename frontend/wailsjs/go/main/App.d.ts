@@ -8,6 +8,8 @@ export function ClearGameWindow():Promise<void>;
 
 export function DeleteTemplate(arg1:string):Promise<void>;
 
+export function EnsureBuiltinTemplates():Promise<void>;
+
 export function GetAppInfo():Promise<main.AppInfo>;
 
 export function GetSettings():Promise<main.AppSettings>;

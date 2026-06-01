@@ -1,6 +1,6 @@
 package main
 
-var AppVersion = "1.4.0"
+var AppVersion = "1.6.0"
 
 const (
 	AppName   = "怀旧天龙CC科技"

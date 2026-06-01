@@ -24,6 +24,8 @@ export namespace main {
 	    file: string;
 	    threshold: number;
 	    enabled: boolean;
+	    category: string;
+	    presetKey: string;
 	
 	    static createFrom(source: any = {}) {
 	        return new TemplateItem(source);
@@ -36,6 +38,8 @@ export namespace main {
 	        this.file = source["file"];
 	        this.threshold = source["threshold"];
 	        this.enabled = source["enabled"];
+	        this.category = source["category"];
+	        this.presetKey = source["presetKey"];
 	    }
 	}
 	export class AppSettings {
@@ -99,6 +103,8 @@ export namespace main {
 	export class MatchScore {
 	    templateId: string;
 	    templateName: string;
+	    category: string;
+	    presetKey: string;
 	    score: number;
 	    found: boolean;
 	    matched: boolean;
@@ -111,6 +117,8 @@ export namespace main {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.templateId = source["templateId"];
 	        this.templateName = source["templateName"];
+	        this.category = source["category"];
+	        this.presetKey = source["presetKey"];
 	        this.score = source["score"];
 	        this.found = source["found"];
 	        this.matched = source["matched"];

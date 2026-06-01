@@ -2,7 +2,7 @@ import "./style.css";
 import "./app.css";
 
 import { EventsOn, WindowMinimise } from "../wailsjs/runtime/runtime";
-import { GetAppInfo, QuitApp } from "../wailsjs/go/main/App";
+import { EnsureBuiltinTemplates, GetAppInfo, QuitApp } from "../wailsjs/go/main/App";
 import { createLog } from "./log.js";
 import { icon } from "./icons.js";
 import { loadSettings } from "./settings.js";
@@ -153,6 +153,7 @@ async function init() {
   } catch (_) { }
 
   try {
+    await EnsureBuiltinTemplates();
     await loadSettings();
   } catch (_) { }
 

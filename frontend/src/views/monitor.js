@@ -1,10 +1,10 @@
 import {
   CaptureScreenBase64,
   DeleteTemplate,
+  EnsureBuiltinTemplates,
   GetSettings,
   GetStatus,
   GetTemplateThumbnailBase64,
-  ImportTemplate,
   ListTemplates,
   SaveSettings,
   SaveTemplate,
@@ -20,6 +20,7 @@ import {
   readMonitorFromForm,
   saveSettings,
 } from "../settings.js";
+import { findBuiltin, groupTemplates, PRESET_ORDER } from "../monitor-presets.js";
 
 export function createMonitorView(root, log) {
   let templates = [];
@@ -33,13 +34,8 @@ export function createMonitorView(root, log) {
     <div class="monitor-view">
       <div class="monitor-scroll">
         <section class="panel">
-          <h3 class="panel-title">识别模板</h3>
-          <div class="btn-row">
-            <button class="btn" id="captureTplBtn" type="button">截取模板</button>
-            <button class="btn" id="importTplBtn" type="button">从文件导入</button>
-            <button class="btn" id="testMatchBtn" type="button">测试匹配</button>
-          </div>
-          <div class="template-list" id="templateList"></div>
+          <h3 class="panel-title">监控项目</h3>
+          <div class="preset-grid" id="presetGrid"></div>
         </section>
 
         <section class="panel">
@@ -48,51 +44,49 @@ export function createMonitorView(root, log) {
             <label class="form-label">轮询间隔(秒)</label>
             <input class="input short" id="pollInterval" type="number" min="1" max="60" value="2" />
 
-            <label class="form-label">连续命中次数</label>
-            <input class="input short" id="consecutiveHits" type="number" min="1" max="20" value="3" />
-
             <label class="form-label">推送冷却(分钟)</label>
             <input class="input short" id="pushCooldown" type="number" min="1" max="120" value="10" />
 
-            <label class="form-label">启动热键</label>
-            <input class="input short" id="hotkeyStart" type="text" value="Home" placeholder="Home" />
-            <button class="btn" id="recStartKeyBtn" type="button">录制</button>
-
-            <label class="form-label">停止热键</label>
-            <input class="input short" id="hotkeyStop" type="text" value="End" placeholder="End" />
-            <button class="btn" id="recStopKeyBtn" type="button">录制</button>
-            <div class="hint span2">热键为全局快捷键，游戏内可用；修改后需重启软件生效</div>
-
-            <label class="form-check span2"><input type="checkbox" id="notifyOnRecover" /> 掉线画面消失后发「疑似已重连」通知</label>
-          </div>
-
-          <div class="btn-row">
-            <button class="btn primary" id="startBtn" type="button">开始监控</button>
-            <button class="btn" id="stopBtn" type="button">停止监控</button>
-            <button class="btn" id="saveSettingsBtn" type="button">保存设置</button>
+            <label class="form-check span2"><input type="checkbox" id="notifyOnRecover" /> 掉线画面消失后发「疑似已重连」通知（仅对「掉线」有效）</label>
           </div>
         </section>
+
+        <section class="panel custom-section">
+          <h3 class="panel-title">自定义监控</h3>
+          <div class="btn-row">
+            <button class="btn primary" id="captureTplBtn" type="button">添加自定义截图监控</button>
+            <button class="btn" id="testMatchBtn" type="button">测试匹配</button>
+          </div>
+          <div class="template-list" id="templateList"></div>
+        </section>
+
+        <div class="btn-row">
+          <button class="btn primary" id="startBtn" type="button">开始监控</button>
+          <button class="btn" id="stopBtn" type="button">停止监控</button>
+          <button class="btn" id="saveSettingsBtn" type="button">保存设置</button>
+        </div>
 
         <div class="status-box" id="status">状态：加载中...</div>
 
         <div class="monitor-footer">
-          <span>模板匹配连续命中后等待网络恢复再微信推送；窗口与推送配置请在「设置」中修改。</span>
+          <span>内置项命中 1 次即推送（掉线等待网络恢复）；窗口与推送请在「设置」中配置。</span>
         </div>
       </div>
     </div>
 
     <div class="crop-overlay hidden" id="cropOverlay">
       <div class="crop-toolbar">
-        <span>拖拽框选掉线画面区域，然后保存</span>
-        <input class="input" id="cropName" type="text" placeholder="模板名称" />
+        <span>拖拽框选监控区域，然后保存</span>
+        <input class="input" id="cropName" type="text" placeholder="监控名称" />
         <input class="input short" id="cropThreshold" type="number" min="0.5" max="0.99" step="0.01" value="0.85" title="相似度阈值" />
-        <button class="btn primary" id="cropSaveBtn" type="button">保存模板</button>
+        <button class="btn primary" id="cropSaveBtn" type="button">保存</button>
         <button class="btn" id="cropCancelBtn" type="button">取消</button>
       </div>
       <canvas id="cropCanvas"></canvas>
     </div>
   `;
 
+  const presetGridEl = root.querySelector("#presetGrid");
   const templateListEl = root.querySelector("#templateList");
   const statusEl = root.querySelector("#status");
   const cropOverlay = root.querySelector("#cropOverlay");
@@ -122,14 +116,53 @@ export function createMonitorView(root, log) {
     return text;
   }
 
-  async function refreshTemplates() {
-    templates = await ListTemplates();
+  async function renderPresetGrid() {
+    presetGridEl.innerHTML = "";
+    for (const meta of PRESET_ORDER) {
+      const tpl = findBuiltin(templates, meta.key);
+      if (!tpl) continue;
+
+      let thumbSrc = "";
+      try {
+        const b64 = await GetTemplateThumbnailBase64(tpl.id);
+        if (b64) thumbSrc = `data:image/png;base64,${b64}`;
+      } catch (_) {}
+
+      const card = document.createElement("label");
+      card.className = "preset-item";
+      card.innerHTML = `
+        <input type="checkbox" class="preset-check" data-id="${tpl.id}" ${tpl.enabled ? "checked" : ""} />
+        <img class="preset-thumb" src="${thumbSrc}" alt="" />
+        <span class="preset-name">${escapeHtml(meta.label)}</span>
+      `;
+      presetGridEl.appendChild(card);
+    }
+
+    presetGridEl.querySelectorAll(".preset-check").forEach((el) => {
+      el.addEventListener("change", async () => {
+        const item = templates.find((x) => x.id === el.dataset.id);
+        if (!item) return;
+        item.enabled = el.checked;
+        try {
+          await UpdateTemplate(item);
+          log.append(`${item.enabled ? "已启用" : "已禁用"}：${item.name}`);
+        } catch (e) {
+          log.append("更新失败: " + e);
+          el.checked = !el.checked;
+        }
+      });
+    });
+  }
+
+  async function refreshCustomTemplates() {
+    const { customs } = groupTemplates(templates);
     templateListEl.innerHTML = "";
-    if (!templates.length) {
-      templateListEl.innerHTML = '<p class="hint">暂无模板，请先截取或导入掉线/login 画面。</p>';
+    if (!customs.length) {
+      templateListEl.innerHTML = '<p class="hint">暂无自定义监控，点击上方按钮添加。</p>';
       return;
     }
-    for (const t of templates) {
+
+    for (const t of customs) {
       let thumbSrc = "";
       try {
         const b64 = await GetTemplateThumbnailBase64(t.id);
@@ -156,19 +189,17 @@ export function createMonitorView(root, log) {
         el.parentElement.nextElementSibling.textContent = parseFloat(el.value).toFixed(2);
       });
       el.addEventListener("change", async () => {
-        const id = el.dataset.id;
-        const item = templates.find((x) => x.id === id);
+        const item = templates.find((x) => x.id === el.dataset.id);
         if (!item) return;
         item.threshold = parseFloat(el.value);
         await UpdateTemplate(item);
-        log.append(`已更新模板阈值：${item.name}`);
+        log.append(`已更新阈值：${item.name}`);
       });
     });
 
     templateListEl.querySelectorAll(".tpl-enabled").forEach((el) => {
       el.addEventListener("change", async () => {
-        const id = el.dataset.id;
-        const item = templates.find((x) => x.id === id);
+        const item = templates.find((x) => x.id === el.dataset.id);
         if (!item) return;
         item.enabled = el.checked;
         await UpdateTemplate(item);
@@ -181,8 +212,8 @@ export function createMonitorView(root, log) {
         el.disabled = true;
         try {
           await DeleteTemplate(id);
-          await refreshTemplates();
-          log.append("已删除模板");
+          await reloadTemplates();
+          log.append("已删除自定义监控");
         } catch (e) {
           log.append("删除失败: " + e);
         } finally {
@@ -190,6 +221,12 @@ export function createMonitorView(root, log) {
         }
       });
     });
+  }
+
+  async function reloadTemplates() {
+    templates = await ListTemplates();
+    await renderPresetGrid();
+    await refreshCustomTemplates();
   }
 
   function drawCropCanvas() {
@@ -234,23 +271,6 @@ export function createMonitorView(root, log) {
     cropDragging = false;
   });
 
-  function setupHotkeyRecord(inputId, btnId) {
-    const input = root.querySelector(`#${inputId}`);
-    const btn = root.querySelector(`#${btnId}`);
-    btn.addEventListener("click", () => {
-      log.append(`请按下新的${inputId === "hotkeyStart" ? "启动" : "停止"}热键…`);
-      input.value = "…";
-      const handler = (ev) => {
-        ev.preventDefault();
-        ev.stopPropagation();
-        const key = ev.key.length === 1 ? ev.key.toUpperCase() : ev.key;
-        input.value = key;
-        window.removeEventListener("keydown", handler, true);
-      };
-      window.addEventListener("keydown", handler, true);
-    });
-  }
-
   root.querySelector("#captureTplBtn").addEventListener("click", async () => {
     try {
       const b64 = await CaptureScreenBase64();
@@ -280,7 +300,7 @@ export function createMonitorView(root, log) {
       log.append("请先框选有效区域");
       return;
     }
-    const name = root.querySelector("#cropName").value.trim() || "掉线模板";
+    const name = root.querySelector("#cropName").value.trim() || "自定义监控";
     const threshold = parseFloat(root.querySelector("#cropThreshold").value) || 0.85;
     const scaleX = cropImage.width / cropCanvas.width;
     const scaleY = cropImage.height / cropCanvas.height;
@@ -302,21 +322,10 @@ export function createMonitorView(root, log) {
     try {
       await SaveTemplate(name, b64, threshold);
       cropOverlay.classList.add("hidden");
-      await refreshTemplates();
-      log.append(`已保存模板：${name}`);
+      await reloadTemplates();
+      log.append(`已添加自定义监控：${name}`);
     } catch (e) {
       log.append("保存失败: " + e);
-    }
-  });
-
-  root.querySelector("#importTplBtn").addEventListener("click", async () => {
-    try {
-      await ImportTemplate("", 0.85);
-      await refreshTemplates();
-      log.append("已导入模板");
-    } catch (e) {
-      if (String(e).includes("取消")) return;
-      log.append("导入失败: " + e);
     }
   });
 
@@ -339,24 +348,22 @@ export function createMonitorView(root, log) {
     try {
       const base = await loadSettings();
       await saveSettings(mergeMonitorSettings(base, readMonitorFromForm(root, templates)));
-      log.append("检测参数已保存（热键变更需重启软件）");
+      log.append("检测参数已保存");
     } catch (e) {
       log.append("保存失败: " + e);
     }
   });
 
-  setupHotkeyRecord("hotkeyStart", "recStartKeyBtn");
-  setupHotkeyRecord("hotkeyStop", "recStopKeyBtn");
-
   root.querySelector("#startBtn").addEventListener("click", async () => {
     const local = readMonitorFromForm(root, templates);
     if (!local.templates?.some((t) => t.enabled)) {
-      log.append("请至少启用一个模板");
+      log.append("请至少启用一个监控项");
       return;
     }
     try {
       const base = await loadSettings();
       const merged = mergeMonitorSettings(base, local);
+      merged.consecutiveHits = 1;
       await StartMonitoring(merged.channelKey, merged);
       log.append("监控已启动", { highlight: true });
     } catch (e) {
@@ -371,10 +378,11 @@ export function createMonitorView(root, log) {
 
   async function init() {
     try {
+      await EnsureBuiltinTemplates();
       const s = await GetSettings();
       applyMonitorToForm(root, s);
       templates = s.templates || [];
-      await refreshTemplates();
+      await reloadTemplates();
     } catch (e) {
       log.append("加载设置失败: " + e);
     }

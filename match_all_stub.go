@@ -27,6 +27,8 @@ func (m *Monitor) matchAll(screen image.Image) []MatchScore {
 		results = append(results, MatchScore{
 			TemplateID:   item.ID,
 			TemplateName: item.Name,
+			Category:     item.Category,
+			PresetKey:    item.PresetKey,
 			Score:        score,
 			Found:        found,
 			Matched:      matched,

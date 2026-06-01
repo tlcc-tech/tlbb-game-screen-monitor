@@ -21,6 +21,8 @@ type TemplateItem struct {
 	File      string  `json:"file"`
 	Threshold float64 `json:"threshold"`
 	Enabled   bool    `json:"enabled"`
+	Category  string  `json:"category"`
+	PresetKey string  `json:"presetKey"`
 }
 
 type AppSettings struct {
@@ -44,7 +46,7 @@ type AppSettings struct {
 func defaultSettings() AppSettings {
 	return AppSettings{
 		PollIntervalSec:   2,
-		ConsecutiveHits:   3,
+		ConsecutiveHits:   1,
 		PushCooldownMin:   10,
 		NetworkWaitMaxMin: 30,
 		PingHost:          defaultProbeHost,
@@ -112,7 +114,9 @@ func loadSettings() (AppSettings, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
 		if os.IsNotExist(err) {
-			return defaultSettings(), nil
+			s := defaultSettings()
+			_ = ensureBuiltinTemplates(&s)
+			return s, nil
 		}
 		return defaultSettings(), err
 	}
@@ -122,6 +126,7 @@ func loadSettings() (AppSettings, error) {
 	}
 	s := ps.AppSettings
 	normalizeSettings(&s)
+	_ = ensureBuiltinTemplates(&s)
 	return s, nil
 }
 
@@ -183,6 +188,19 @@ func normalizeSettings(s *AppSettings) {
 	for i := range s.Templates {
 		if s.Templates[i].Threshold <= 0 || s.Templates[i].Threshold > 1 {
 			s.Templates[i].Threshold = 0.85
+		}
+		if s.Templates[i].Category == "" {
+			if s.Templates[i].PresetKey != "" {
+				for _, def := range builtinPresets {
+					if def.Key == s.Templates[i].PresetKey {
+						s.Templates[i].Category = def.Category
+						break
+					}
+				}
+			}
+			if s.Templates[i].Category == "" {
+				s.Templates[i].Category = categoryCustom
+			}
 		}
 	}
 }

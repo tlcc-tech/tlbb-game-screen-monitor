@@ -58,6 +58,10 @@ func (a *App) CaptureScreenBase64() (string, error) {
 	return captureScreenPNGBase64(a.monitor.GetSettings())
 }
 
+func (a *App) EnsureBuiltinTemplates() error {
+	return a.monitor.ensureTemplatesReady()
+}
+
 func (a *App) ListTemplates() []TemplateItem {
 	return a.monitor.ListTemplates()
 }
@@ -117,6 +121,7 @@ func (a *App) GetStatus() MonitorStatus {
 }
 
 func (a *App) GetSettings() AppSettings {
+	_ = a.monitor.ensureTemplatesReady()
 	return a.monitor.GetSettings()
 }
 

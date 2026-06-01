@@ -26,6 +26,8 @@ export function readGlobalFromForm(root, windowBindState) {
     networkWaitMaxMin: parseInt(root.querySelector("#networkWaitMax").value, 10) || 30,
     gameWindowTitle: windowBindState?.title || "",
     gameWindowHwnd: windowBindState?.hwnd || 0,
+    hotkeyStart: root.querySelector("#hotkeyStart").value.trim() || "Home",
+    hotkeyStop: root.querySelector("#hotkeyStop").value.trim() || "End",
   };
 }
 
@@ -36,6 +38,8 @@ export function applyGlobalToForm(root, settings, windowBindState) {
   root.querySelector("#usePing").checked = settings.usePing !== false;
   root.querySelector("#useHttp").checked = settings.useHttp !== false;
   root.querySelector("#networkWaitMax").value = settings.networkWaitMaxMin || 30;
+  root.querySelector("#hotkeyStart").value = settings.hotkeyStart || "Home";
+  root.querySelector("#hotkeyStop").value = settings.hotkeyStop || "End";
   if (windowBindState) {
     windowBindState.hwnd = settings.gameWindowHwnd || 0;
     windowBindState.title = settings.gameWindowTitle || "";
@@ -45,10 +49,8 @@ export function applyGlobalToForm(root, settings, windowBindState) {
 export function readMonitorFromForm(root, templates) {
   return {
     pollIntervalSec: parseInt(root.querySelector("#pollInterval").value, 10) || 2,
-    consecutiveHits: parseInt(root.querySelector("#consecutiveHits").value, 10) || 3,
+    consecutiveHits: 1,
     pushCooldownMin: parseInt(root.querySelector("#pushCooldown").value, 10) || 10,
-    hotkeyStart: root.querySelector("#hotkeyStart").value.trim() || "Home",
-    hotkeyStop: root.querySelector("#hotkeyStop").value.trim() || "End",
     notifyOnRecover: root.querySelector("#notifyOnRecover").checked,
     templates,
   };
@@ -56,15 +58,12 @@ export function readMonitorFromForm(root, templates) {
 
 export function applyMonitorToForm(root, settings) {
   root.querySelector("#pollInterval").value = settings.pollIntervalSec || 2;
-  root.querySelector("#consecutiveHits").value = settings.consecutiveHits || 3;
   root.querySelector("#pushCooldown").value = settings.pushCooldownMin || 10;
-  root.querySelector("#hotkeyStart").value = settings.hotkeyStart || "Home";
-  root.querySelector("#hotkeyStop").value = settings.hotkeyStop || "End";
   root.querySelector("#notifyOnRecover").checked = !!settings.notifyOnRecover;
 }
 
 export function mergeMonitorSettings(global, monitorPartial) {
-  return { ...global, ...monitorPartial };
+  return { ...global, ...monitorPartial, consecutiveHits: 1 };
 }
 
 export function mergeGlobalSettings(base, globalPartial) {

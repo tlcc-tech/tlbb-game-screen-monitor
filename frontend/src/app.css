@@ -386,6 +386,57 @@ body {
   font-size: 12px;
 }
 
+.preset-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+}
+
+.preset-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 8px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: border-color 0.15s;
+}
+
+.preset-item:hover {
+  border-color: var(--accent);
+}
+
+.preset-check {
+  align-self: flex-start;
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+}
+
+.preset-thumb {
+  width: 100%;
+  max-width: 120px;
+  height: 72px;
+  object-fit: contain;
+  background: #111;
+  border-radius: 4px;
+}
+
+.preset-name {
+  font-size: 12px;
+  font-weight: 600;
+  text-align: center;
+  color: var(--text-primary);
+}
+
+.custom-section {
+  border-top: 1px dashed var(--border);
+  padding-top: 4px;
+}
+
 .template-list {
   display: flex;
   flex-wrap: wrap;

@@ -49,9 +49,10 @@ type Monitor struct {
 	hitStreak        int
 	phase            MonitorPhase
 	lastScores       []MatchScore
-	lastMatchedName  string
-	lastMatchedScore float64
-	lastChecked      time.Time
+	lastMatchedName    string
+	lastMatchedScore   float64
+	lastMatchedCategory string
+	lastChecked        time.Time
 	lastError        string
 	nextPollAt       time.Time
 	cooldownUntil    time.Time
@@ -267,12 +268,14 @@ func (m *Monitor) checkOnce(ctx context.Context, settings AppSettings) {
 
 	bestName := ""
 	bestScore := 0.0
+	bestCategory := ""
 	matched := false
 	for _, s := range scores {
 		if s.Matched && s.Score > bestScore {
 			matched = true
 			bestScore = s.Score
 			bestName = s.TemplateName
+			bestCategory = s.Category
 		}
 	}
 
@@ -280,17 +283,19 @@ func (m *Monitor) checkOnce(ctx context.Context, settings AppSettings) {
 	defer m.mu.Unlock()
 
 	if !matched {
-		if m.wasMatched && settings.NotifyOnRecover {
+		if m.wasMatched && settings.NotifyOnRecover && m.lastMatchedCategory == categoryNetwork {
 			m.tryRecoverNotify(ctx, settings)
 		}
 		m.hitStreak = 0
 		m.wasMatched = false
+		m.lastMatchedCategory = ""
 		return
 	}
 
 	m.hitStreak++
 	m.lastMatchedName = bestName
 	m.lastMatchedScore = bestScore
+	m.lastMatchedCategory = bestCategory
 	m.wasMatched = true
 
 	if m.hitStreak < settings.ConsecutiveHits {
@@ -303,12 +308,43 @@ func (m *Monitor) checkOnce(ctx context.Context, settings AppSettings) {
 	m.pendingScore = bestScore
 	if !m.pushInFlight {
 		m.pushInFlight = true
-		m.emitLog(fmt.Sprintf("连续命中，等待网络恢复后推送：%s (%.3f)", bestName, bestScore))
-		go m.handlePendingPush(ctx, settings, bestName, bestScore)
+		if bestCategory == categoryNetwork {
+			m.emitLog(fmt.Sprintf("连续命中，等待网络恢复后推送：%s (%.3f)", bestName, bestScore))
+			go m.handlePendingPush(ctx, settings, bestName, bestScore, bestCategory)
+		} else {
+			m.emitLog(fmt.Sprintf("命中，立即推送：%s (%.3f)", bestName, bestScore))
+			go m.handleInstantPush(ctx, settings, bestName, bestScore, bestCategory)
+		}
 	}
 }
 
-func (m *Monitor) handlePendingPush(ctx context.Context, settings AppSettings, templateName string, score float64) {
+func (m *Monitor) handleInstantPush(ctx context.Context, settings AppSettings, templateName string, score float64, category string) {
+	defer func() {
+		m.mu.Lock()
+		m.pushInFlight = false
+		m.mu.Unlock()
+	}()
+
+	channelKey := strings.TrimSpace(settings.ChannelKey)
+	if channelKey == "" {
+		m.emitLog("未配置推送链接，跳过微信推送")
+		m.enterCooldown(settings)
+		return
+	}
+
+	title := buildPushTitle(category, templateName)
+	content := buildDisconnectPushContent(templateName, score)
+	if err := sendWechatPush(ctx, channelKey, title, content); err != nil {
+		m.setError("推送失败: " + err.Error())
+		m.emitLog("推送失败: " + err.Error())
+		return
+	}
+
+	m.emitLog("微信推送成功")
+	m.enterCooldown(settings)
+}
+
+func (m *Monitor) handlePendingPush(ctx context.Context, settings AppSettings, templateName string, score float64, category string) {
 	defer func() {
 		m.mu.Lock()
 		m.pushInFlight = false
@@ -343,7 +379,7 @@ func (m *Monitor) handlePendingPush(ctx context.Context, settings AppSettings, t
 		return
 	}
 
-	title := "游戏可能已掉线"
+	title := buildPushTitle(category, templateName)
 	content := buildDisconnectPushContent(templateName, score)
 	if err := sendWechatPush(ctx, channelKey, title, content); err != nil {
 		m.setError("推送失败: " + err.Error())

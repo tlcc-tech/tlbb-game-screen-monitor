@@ -14,6 +14,26 @@ import (
 
 const xizhiDefaultHost = "xizhi.qqoq.net"
 
+func buildPushTitle(category string, templateName string) string {
+	switch category {
+	case categoryCombat:
+		switch templateName {
+		case "有人宣战":
+			return "有人向你宣战"
+		case "受到攻击":
+			return "正在受到攻击"
+		default:
+			return "战斗提醒"
+		}
+	case categoryStatus:
+		return "角色已死亡"
+	case categoryNetwork:
+		return "游戏可能已掉线"
+	default:
+		return "游戏监控提醒"
+	}
+}
+
 func buildDisconnectPushContent(templateName string, score float64) string {
 	host, _ := os.Hostname()
 	if host == "" {

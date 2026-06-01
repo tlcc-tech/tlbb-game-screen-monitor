@@ -1,5 +1,6 @@
 import { ClearGameWindow, PickGameWindow } from "../../wailsjs/go/main/App";
 import { BrowserOpenURL } from "../../wailsjs/runtime/runtime";
+import { setupHotkeyRecord } from "../hotkey.js";
 import {
   applyGlobalToForm,
   formatWindowBindLabel,
@@ -50,6 +51,20 @@ export function renderSettingsModal(container, log, onClose) {
             <input class="input short" id="networkWaitMax" type="number" min="1" max="120" value="30" />
           </div>
         </section>
+
+        <section class="settings-section">
+          <h3 class="settings-section-title">快捷键</h3>
+          <div class="form-grid settings-grid">
+            <label class="form-label">启动热键</label>
+            <input class="input short" id="hotkeyStart" type="text" value="Home" placeholder="Home" />
+            <button class="btn" id="recStartKeyBtn" type="button">录制</button>
+
+            <label class="form-label">停止热键</label>
+            <input class="input short" id="hotkeyStop" type="text" value="End" placeholder="End" />
+            <button class="btn" id="recStopKeyBtn" type="button">录制</button>
+          </div>
+          <p class="hint">热键为全局快捷键，游戏内可用；修改后需重启软件生效</p>
+        </section>
       </div>
       <div class="btn-row modal-actions">
         <button class="btn primary" id="settingsSaveBtn" type="button">保存</button>
@@ -68,6 +83,9 @@ export function renderSettingsModal(container, log, onClose) {
     applyGlobalToForm(container, s, windowBindState);
     updateWindowBindLabel();
   }
+
+  setupHotkeyRecord(container, "hotkeyStart", "recStartKeyBtn", log, "启动");
+  setupHotkeyRecord(container, "hotkeyStop", "recStopKeyBtn", log, "停止");
 
   container.querySelector("#pickWindowBtn").addEventListener("click", async () => {
     try {
@@ -110,7 +128,7 @@ export function renderSettingsModal(container, log, onClose) {
       await saveSettings(
         mergeGlobalSettings(base, readGlobalFromForm(container, windowBindState)),
       );
-      log.append("全局设置已保存");
+      log.append("全局设置已保存（热键变更需重启软件）");
       onClose();
     } catch (e) {
       log.append("保存失败: " + e);

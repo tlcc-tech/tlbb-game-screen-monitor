@@ -16,12 +16,23 @@ import (
 type MatchScore struct {
 	TemplateID   string  `json:"templateId"`
 	TemplateName string  `json:"templateName"`
+	Category     string  `json:"category"`
+	PresetKey    string  `json:"presetKey"`
 	Score        float64 `json:"score"`
 	Found        bool    `json:"found"`
 	Matched      bool    `json:"matched"`
 }
 
+func (m *Monitor) ensureTemplatesReady() error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	return ensureBuiltinTemplates(&m.settings)
+}
+
 func (m *Monitor) ListTemplates() []TemplateItem {
+	if err := m.ensureTemplatesReady(); err != nil {
+		return nil
+	}
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	out := make([]TemplateItem, len(m.settings.Templates))
@@ -64,6 +75,8 @@ func (m *Monitor) SaveTemplate(name string, pngBase64 string, threshold float64)
 		File:      filepath.Base(path),
 		Threshold: threshold,
 		Enabled:   true,
+		Category:  categoryCustom,
+		PresetKey: "",
 	}
 
 	m.mu.Lock()
@@ -82,6 +95,16 @@ func (m *Monitor) DeleteTemplate(id string) error {
 	if id == "" {
 		return errors.New("模板 ID 无效")
 	}
+
+	m.mu.Lock()
+	for _, t := range m.settings.Templates {
+		if t.ID == id && t.PresetKey != "" {
+			m.mu.Unlock()
+			return errors.New("内置监控项不可删除，请取消勾选即可")
+		}
+	}
+	m.mu.Unlock()
+
 	path, err := templateFilePath(id)
 	if err != nil {
 		return err
@@ -113,11 +136,11 @@ func (m *Monitor) UpdateTemplate(item TemplateItem) error {
 			if item.Threshold <= 0 || item.Threshold > 1 {
 				item.Threshold = 0.85
 			}
-			if strings.TrimSpace(item.Name) != "" {
-				t.Name = strings.TrimSpace(item.Name)
-			}
 			t.Threshold = item.Threshold
 			t.Enabled = item.Enabled
+			if t.PresetKey == "" && strings.TrimSpace(item.Name) != "" {
+				t.Name = strings.TrimSpace(item.Name)
+			}
 			m.settings.Templates[i] = t
 			return saveSettings(m.settings)
 		}

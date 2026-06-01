@@ -14,6 +14,10 @@ export function DeleteTemplate(arg1) {
   return window['go']['main']['App']['DeleteTemplate'](arg1);
 }
 
+export function EnsureBuiltinTemplates() {
+  return window['go']['main']['App']['EnsureBuiltinTemplates']();
+}
+
 export function GetAppInfo() {
   return window['go']['main']['App']['GetAppInfo']();
 }
