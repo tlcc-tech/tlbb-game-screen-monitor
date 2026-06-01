@@ -40,7 +40,7 @@ build/bin/
 
 ```bash
 cd frontend && npm install && npm run build
-cd .. && wails generate module
+cd .. && wails generate module   # 更新 Go 绑定后需重新生成并提交 frontend/wailsjs
 wails dev   # 需在 Windows 上验证截图
 ```
 

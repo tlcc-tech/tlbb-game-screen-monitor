@@ -56,9 +56,6 @@ jobs:
           $ErrorActionPreference = 'Stop'
           Set-Location frontend
           npm ci
-          Set-Location ..
-          wails generate module
-          Set-Location frontend
           npm run build
           Set-Location ..
 
@@ -76,6 +73,7 @@ jobs:
           New-Item -ItemType Directory -Force -Path build/bin/dm | Out-Null
           Copy-Item -Force third_party/dm/* build/bin/dm/
           wails build -platform windows/amd64 -clean -ldflags "-X main.AppVersion=${{ steps.ver.outputs.version }}"
+          if ($LASTEXITCODE -ne 0) { throw "wails build failed with exit code $LASTEXITCODE" }
           Copy-Item -Force "build/bin/tlbb-game-screen-monitor.exe" "build/bin/游戏掉线监控-windows-amd64.exe"
 
       - name: Upload artifacts

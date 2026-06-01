@@ -8,5 +8,4 @@ build/installer/
 build/windows/installer/
 node_modules/
 frontend/dist/
-frontend/wailsjs/
 .DS_Store
