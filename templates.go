@@ -179,7 +179,10 @@ func (m *Monitor) loadTemplateImage(id string) (image.Image, *TemplateItem, erro
 }
 
 func (m *Monitor) TestMatch() ([]MatchScore, error) {
-	screen, err := captureScreen(m.getGameWindowTitle())
+	m.mu.Lock()
+	settings := m.settings
+	m.mu.Unlock()
+	screen, err := captureScreen(settings)
 	if err != nil {
 		return nil, err
 	}

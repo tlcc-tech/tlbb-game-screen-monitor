@@ -8,6 +8,7 @@ import {
 } from "../wailsjs/runtime/runtime";
 import {
   CaptureScreenBase64,
+  ClearGameWindow,
   DeleteTemplate,
   GetAppInfo,
   GetSettings,
@@ -15,6 +16,7 @@ import {
   GetTemplateThumbnailBase64,
   ImportTemplate,
   ListTemplates,
+  PickGameWindow,
   QuitApp,
   SaveSettings,
   SaveTemplate,
@@ -56,8 +58,21 @@ document.querySelector("#app").innerHTML = `
                 <label class="form-label">网络等待上限(分钟)</label>
                 <input class="input short" id="networkWaitMax" type="number" min="1" max="120" value="30" />
 
-                <label class="form-label">游戏窗口标题包含</label>
-                <input class="input full" id="gameWindowTitle" type="text" placeholder="留空=全屏，例如：天龙八部" />
+                <label class="form-label">游戏窗口</label>
+                <div class="btn-row span2">
+                    <button class="btn" id="pickWindowBtn" type="button">选择游戏窗口</button>
+                    <button class="btn" id="clearWindowBtn" type="button">清除绑定</button>
+                </div>
+                <div class="hint span2" id="windowBindLabel">未绑定（将使用全屏截图）</div>
+
+                <label class="form-label">启动热键</label>
+                <input class="input short" id="hotkeyStart" type="text" value="Home" placeholder="Home" />
+                <button class="btn" id="recStartKeyBtn" type="button">录制</button>
+
+                <label class="form-label">停止热键</label>
+                <input class="input short" id="hotkeyStop" type="text" value="End" placeholder="End" />
+                <button class="btn" id="recStopKeyBtn" type="button">录制</button>
+                <div class="hint span2">热键为全局快捷键，游戏内可用；修改后需重启软件生效</div>
 
                 <label class="form-label">Ping 主机</label>
                 <input class="input full" id="pingHost" type="text" value="xz.qqoq.net" />
@@ -145,10 +160,27 @@ function readSettingsFromUI() {
     httpProbeUrl: document.getElementById("httpProbeUrl").value.trim(),
     usePing: document.getElementById("usePing").checked,
     useHttp: document.getElementById("useHttp").checked,
-    gameWindowTitle: document.getElementById("gameWindowTitle").value.trim(),
+    gameWindowTitle: windowBindState.title || "",
+    gameWindowHwnd: windowBindState.hwnd || 0,
+    hotkeyStart: document.getElementById("hotkeyStart").value.trim() || "Home",
+    hotkeyStop: document.getElementById("hotkeyStop").value.trim() || "End",
     notifyOnRecover: document.getElementById("notifyOnRecover").checked,
     templates: templates,
   };
+}
+
+let windowBindState = { hwnd: 0, title: "" };
+
+function updateWindowBindLabel() {
+  const el = document.getElementById("windowBindLabel");
+  if (!el) return;
+  if (windowBindState.hwnd) {
+    el.textContent = `已绑定：${windowBindState.title} (0x${windowBindState.hwnd.toString(16).toUpperCase()})`;
+  } else if (windowBindState.title) {
+    el.textContent = `标题回退：${windowBindState.title}`;
+  } else {
+    el.textContent = "未绑定（将使用全屏截图）";
+  }
 }
 
 function applySettingsToUI(s) {
@@ -161,7 +193,10 @@ function applySettingsToUI(s) {
   document.getElementById("httpProbeUrl").value = s.httpProbeUrl || "https://xz.qqoq.net";
   document.getElementById("usePing").checked = s.usePing !== false;
   document.getElementById("useHttp").checked = s.useHttp !== false;
-  document.getElementById("gameWindowTitle").value = s.gameWindowTitle || "";
+  windowBindState = { hwnd: s.gameWindowHwnd || 0, title: s.gameWindowTitle || "" };
+  document.getElementById("hotkeyStart").value = s.hotkeyStart || "Home";
+  document.getElementById("hotkeyStop").value = s.hotkeyStop || "End";
+  updateWindowBindLabel();
   document.getElementById("notifyOnRecover").checked = !!s.notifyOnRecover;
   templates = s.templates || [];
 }
@@ -403,11 +438,53 @@ document.getElementById("testMatchBtn").addEventListener("click", async () => {
 document.getElementById("saveSettingsBtn").addEventListener("click", async () => {
   try {
     await SaveSettings(readSettingsFromUI());
-    appendLog("设置已保存");
+    appendLog("设置已保存（热键变更需重启软件）");
   } catch (e) {
     appendLog("保存失败: " + e);
   }
 });
+
+document.getElementById("pickWindowBtn").addEventListener("click", async () => {
+  try {
+    appendLog("即将最小化本窗口，请点击目标游戏窗口…");
+    const info = await PickGameWindow();
+    windowBindState = { hwnd: info.hwnd, title: info.title };
+    updateWindowBindLabel();
+    appendLog(`已绑定：${info.title}`);
+  } catch (e) {
+    appendLog("选窗失败: " + e);
+  }
+});
+
+document.getElementById("clearWindowBtn").addEventListener("click", async () => {
+  try {
+    await ClearGameWindow();
+    windowBindState = { hwnd: 0, title: "" };
+    updateWindowBindLabel();
+    appendLog("已清除窗口绑定");
+  } catch (e) {
+    appendLog("清除失败: " + e);
+  }
+});
+
+function setupHotkeyRecord(inputId, btnId) {
+  const input = document.getElementById(inputId);
+  const btn = document.getElementById(btnId);
+  btn.addEventListener("click", () => {
+    appendLog(`请按下新的${inputId === "hotkeyStart" ? "启动" : "停止"}热键…`);
+    input.value = "…";
+    const handler = (ev) => {
+      ev.preventDefault();
+      ev.stopPropagation();
+      const key = ev.key.length === 1 ? ev.key.toUpperCase() : ev.key;
+      input.value = key;
+      window.removeEventListener("keydown", handler, true);
+    };
+    window.addEventListener("keydown", handler, true);
+  });
+}
+setupHotkeyRecord("hotkeyStart", "recStartKeyBtn");
+setupHotkeyRecord("hotkeyStop", "recStopKeyBtn");
 
 document.getElementById("startBtn").addEventListener("click", async () => {
   const s = readSettingsFromUI();

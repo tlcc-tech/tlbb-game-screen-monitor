@@ -5,6 +5,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 )
 
@@ -33,6 +34,9 @@ type AppSettings struct {
 	UsePing             bool           `json:"usePing"`
 	UseHttp             bool           `json:"useHttp"`
 	GameWindowTitle     string         `json:"gameWindowTitle"`
+	GameWindowHwnd      int64          `json:"gameWindowHwnd"`
+	HotkeyStart         string         `json:"hotkeyStart"`
+	HotkeyStop          string         `json:"hotkeyStop"`
 	NotifyOnRecover     bool           `json:"notifyOnRecover"`
 	Templates           []TemplateItem `json:"templates"`
 }
@@ -47,6 +51,8 @@ func defaultSettings() AppSettings {
 		HttpProbeURL:      "https://" + defaultProbeHost,
 		UsePing:           true,
 		UseHttp:           true,
+		HotkeyStart:       "Home",
+		HotkeyStop:        "End",
 		Templates:         []TemplateItem{},
 	}
 }
@@ -167,6 +173,12 @@ func normalizeSettings(s *AppSettings) {
 	}
 	if s.HttpProbeURL == "" {
 		s.HttpProbeURL = "https://" + defaultProbeHost
+	}
+	if strings.TrimSpace(s.HotkeyStart) == "" {
+		s.HotkeyStart = "Home"
+	}
+	if strings.TrimSpace(s.HotkeyStop) == "" {
+		s.HotkeyStop = "End"
 	}
 	for i := range s.Templates {
 		if s.Templates[i].Threshold <= 0 || s.Templates[i].Threshold > 1 {

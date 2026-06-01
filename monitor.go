@@ -122,6 +122,9 @@ func (m *Monitor) Start(channelKey string, settings AppSettings) error {
 	m.mu.Unlock()
 
 	go m.loop(ctx)
+	if settings.GameWindowHwnd != 0 {
+		m.emitLog(fmt.Sprintf("已绑定窗口: %s (0x%X)", settings.GameWindowTitle, settings.GameWindowHwnd))
+	}
 	m.emitLog("监控已启动")
 	return nil
 }
@@ -140,6 +143,7 @@ func (m *Monitor) Stop() {
 	m.hitStreak = 0
 	m.pendingTemplate = ""
 	m.mu.Unlock()
+	releaseDmCaptureBinding()
 	m.emitLog("监控已停止")
 }
 
@@ -240,7 +244,7 @@ func (m *Monitor) checkOnce(ctx context.Context, settings AppSettings) {
 	m.emitLog("开始识别…")
 
 	capStart := time.Now()
-	screen, err := captureScreen(settings.GameWindowTitle)
+	screen, err := captureScreen(settings)
 	capElapsed := time.Since(capStart)
 	if err != nil {
 		m.setError(err.Error())

@@ -12,6 +12,7 @@ import (
 var assets embed.FS
 
 func main() {
+	initRuntimeDLLPaths()
 	app := NewApp()
 
 	err := wails.Run(&options.App{

@@ -4,6 +4,8 @@ import {main} from '../models';
 
 export function CaptureScreenBase64():Promise<string>;
 
+export function ClearGameWindow():Promise<void>;
+
 export function DeleteTemplate(arg1:string):Promise<void>;
 
 export function GetAppInfo():Promise<main.AppInfo>;
@@ -17,6 +19,8 @@ export function GetTemplateThumbnailBase64(arg1:string):Promise<string>;
 export function ImportTemplate(arg1:string, arg2:number):Promise<main.TemplateItem>;
 
 export function ListTemplates():Promise<Array<main.TemplateItem>>;
+
+export function PickGameWindow():Promise<main.WindowInfo>;
 
 export function QuitApp():Promise<void>;
 

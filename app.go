@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"errors"
+	"fmt"
 	"path/filepath"
 	"strings"
 	"sync/atomic"
@@ -25,6 +26,7 @@ func (a *App) startup(ctx context.Context) {
 	a.ctx = ctx
 	a.monitor.Attach(ctx)
 	setupTray(a)
+	setupHotkeys(a, a.monitor)
 	a.startAutoUpdateCheck()
 }
 
@@ -44,6 +46,8 @@ func (a *App) beforeClose(ctx context.Context) (prevent bool) {
 
 func (a *App) QuitApp() {
 	a.allowQuit.Store(true)
+	stopHotkeys()
+	releaseDmCaptureBinding()
 	trayQuit()
 	if a.ctx != nil {
 		runtime.Quit(a.ctx)
@@ -51,8 +55,7 @@ func (a *App) QuitApp() {
 }
 
 func (a *App) CaptureScreenBase64() (string, error) {
-	title := a.monitor.getGameWindowTitle()
-	return captureScreenPNGBase64(title)
+	return captureScreenPNGBase64(a.monitor.GetSettings())
 }
 
 func (a *App) ListTemplates() []TemplateItem {
@@ -118,7 +121,48 @@ func (a *App) GetSettings() AppSettings {
 }
 
 func (a *App) SaveSettings(settings AppSettings) error {
-	return a.monitor.SaveSettings(settings)
+	if err := a.monitor.SaveSettings(settings); err != nil {
+		return err
+	}
+	refreshHotkeys(a.monitor)
+	return nil
+}
+
+type WindowInfo struct {
+	Hwnd      int64  `json:"hwnd"`
+	Title     string `json:"title"`
+	ClassName string `json:"className"`
+}
+
+func (a *App) PickGameWindow() (WindowInfo, error) {
+	if a.ctx == nil {
+		return WindowInfo{}, errNotReady()
+	}
+	runtime.WindowMinimise(a.ctx)
+	a.monitor.emitLog("请在 8 秒内点击目标游戏窗口…")
+	info, err := pickGameWindowInteractive()
+	if err != nil {
+		runtime.WindowShow(a.ctx)
+		return WindowInfo{}, err
+	}
+	s := a.monitor.GetSettings()
+	s.GameWindowHwnd = info.Hwnd
+	s.GameWindowTitle = info.Title
+	if err := a.monitor.SaveSettings(s); err != nil {
+		runtime.WindowShow(a.ctx)
+		return WindowInfo{}, err
+	}
+	runtime.WindowShow(a.ctx)
+	a.monitor.emitLog(fmt.Sprintf("已绑定窗口: %s (0x%X) [%s]", info.Title, info.Hwnd, info.ClassName))
+	return info, nil
+}
+
+func (a *App) ClearGameWindow() error {
+	s := a.monitor.GetSettings()
+	s.GameWindowHwnd = 0
+	s.GameWindowTitle = ""
+	releaseDmCaptureBinding()
+	return a.monitor.SaveSettings(s)
 }
 
 func (a *App) GetAppInfo() AppInfo {

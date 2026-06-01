@@ -92,30 +92,45 @@ func (a *App) checkAndUpdate(ctx context.Context) error {
 	exePath, _ = filepath.Abs(exePath)
 	exeDir := filepath.Dir(exePath)
 
-	newPath := filepath.Join(exeDir, ".update-new.exe")
-	if err := downloadFile(ctx, asset.BrowserDownloadURL, newPath, func(percent int, downloaded int64, total int64) {
-		if total > 0 {
-			a.emitLog("INFO", fmt.Sprintf("下载进度：%d%%（%s/%s）", percent, humanBytes(downloaded), humanBytes(total)))
-			return
+	isZip := strings.HasSuffix(strings.ToLower(asset.Name), ".zip")
+	if isZip {
+		newZip := filepath.Join(exeDir, ".update-new.zip")
+		if err := downloadFile(ctx, asset.BrowserDownloadURL, newZip, a.downloadProgress); err != nil {
+			return err
 		}
-		a.emitLog("INFO", fmt.Sprintf("下载中：%s", humanBytes(downloaded)))
-	}); err != nil {
-		return err
-	}
-
-	a.emitLog("INFO", "更新已下载，准备替换并重启...")
-
-	pid := os.Getpid()
-	script := fmt.Sprintf(`$pid=%d; $src=%q; $dst=%q; Wait-Process -Id $pid -ErrorAction SilentlyContinue; Start-Sleep -Milliseconds 300; Move-Item -Force $src $dst; Start-Process -FilePath $dst`, pid, newPath, exePath)
-	cmd := exec.Command("powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-WindowStyle", "Hidden", "-Command", script)
-	if err := cmd.Start(); err != nil {
-		return err
+		a.emitLog("INFO", "更新包已下载，准备解压并重启...")
+		pid := os.Getpid()
+		script := fmt.Sprintf(`$pid=%d; $zip=%q; $dir=%q; $exe=%q; Wait-Process -Id $pid -ErrorAction SilentlyContinue; Start-Sleep -Milliseconds 300; Expand-Archive -Path $zip -DestinationPath $dir -Force; Remove-Item -Force $zip; Start-Process -FilePath $exe`, pid, newZip, exeDir, exePath)
+		cmd := exec.Command("powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-WindowStyle", "Hidden", "-Command", script)
+		if err := cmd.Start(); err != nil {
+			return err
+		}
+	} else {
+		newPath := filepath.Join(exeDir, ".update-new.exe")
+		if err := downloadFile(ctx, asset.BrowserDownloadURL, newPath, a.downloadProgress); err != nil {
+			return err
+		}
+		a.emitLog("INFO", "更新已下载，准备替换并重启...")
+		pid := os.Getpid()
+		script := fmt.Sprintf(`$pid=%d; $src=%q; $dst=%q; Wait-Process -Id $pid -ErrorAction SilentlyContinue; Start-Sleep -Milliseconds 300; Move-Item -Force $src $dst; Start-Process -FilePath $dst`, pid, newPath, exePath)
+		cmd := exec.Command("powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-WindowStyle", "Hidden", "-Command", script)
+		if err := cmd.Start(); err != nil {
+			return err
+		}
 	}
 
 	if a.ctx != nil {
 		wailsRuntime.Quit(a.ctx)
 	}
 	return nil
+}
+
+func (a *App) downloadProgress(percent int, downloaded int64, total int64) {
+	if total > 0 {
+		a.emitLog("INFO", fmt.Sprintf("下载进度：%d%%（%s/%s）", percent, humanBytes(downloaded), humanBytes(total)))
+		return
+	}
+	a.emitLog("INFO", fmt.Sprintf("下载中：%s", humanBytes(downloaded)))
 }
 
 func (a *App) emitLog(level string, msg string) {
@@ -155,13 +170,21 @@ func fetchLatestRelease(ctx context.Context) (*githubRelease, error) {
 }
 
 func pickWindowsAsset(rel *githubRelease) (*releaseAsset, error) {
+	var exeFallback *releaseAsset
 	for _, a := range rel.Assets {
 		name := strings.ToLower(a.Name)
-		if strings.HasSuffix(name, "windows-amd64.exe") {
+		if strings.HasSuffix(name, "windows-amd64.zip") {
 			return &releaseAsset{Name: a.Name, BrowserDownloadURL: a.BrowserDownloadURL}, nil
 		}
+		if strings.HasSuffix(name, "windows-amd64.exe") {
+			cp := a
+			exeFallback = &releaseAsset{Name: cp.Name, BrowserDownloadURL: cp.BrowserDownloadURL}
+		}
 	}
-	return nil, errors.New("未找到 windows-amd64.exe 更新包，请确认 Release 资产已上传")
+	if exeFallback != nil {
+		return exeFallback, nil
+	}
+	return nil, errors.New("未找到 windows-amd64.zip 或 exe 更新包")
 }
 
 func downloadFile(ctx context.Context, url string, dst string, onProgress func(percent int, downloaded int64, total int64)) error {

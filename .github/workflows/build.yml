@@ -92,6 +92,10 @@ jobs:
             opencv/opencv_contrib-4.11.0
           key: opencv-source-4110-gocv-v3
 
+      - name: Fetch DM plugin
+        shell: pwsh
+        run: ./scripts/fetch-dm.ps1
+
       - name: Build frontend
         shell: pwsh
         run: |
@@ -101,6 +105,15 @@ jobs:
           npm run build
           Set-Location ..
 
+      - name: Build dmcapture sidecar
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          New-Item -ItemType Directory -Force -Path build/bin/runtime | Out-Null
+          $env:GOOS = 'windows'
+          $env:GOARCH = '386'
+          go build -o build/bin/runtime/dmcapture.exe ./cmd/dmcapture
+
       - name: Build (Windows)
         shell: pwsh
         run: |
@@ -109,12 +122,18 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw "wails build failed with exit code $LASTEXITCODE" }
           Copy-Item -Force "build/bin/tlbb-game-screen-monitor.exe" "build/bin/游戏掉线监控-windows-amd64.exe"
           ./scripts/copy-runtime-dlls.ps1
+          $zipPath = Join-Path (Resolve-Path "build/bin") "游戏掉线监控-windows-amd64.zip"
+          if (Test-Path $zipPath) { Remove-Item -Force $zipPath }
+          Compress-Archive -Path "build/bin/*" -DestinationPath $zipPath -Force
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v5
         with:
           name: windows-build
-          path: build/bin/**
+          path: |
+            build/bin/游戏掉线监控-windows-amd64.exe
+            build/bin/游戏掉线监控-windows-amd64.zip
+            build/bin/runtime/**
 
   release:
     if: startsWith(github.ref, 'refs/tags/v')
@@ -131,7 +150,6 @@ jobs:
         with:
           generate_release_notes: true
           files: |
-            dist/**/游戏掉线监控-windows-amd64.exe
-            dist/**/*.dll
+            dist/**/游戏掉线监控-windows-amd64.zip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

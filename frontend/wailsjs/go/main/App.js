@@ -6,6 +6,10 @@ export function CaptureScreenBase64() {
   return window['go']['main']['App']['CaptureScreenBase64']();
 }
 
+export function ClearGameWindow() {
+  return window['go']['main']['App']['ClearGameWindow']();
+}
+
 export function DeleteTemplate(arg1) {
   return window['go']['main']['App']['DeleteTemplate'](arg1);
 }
@@ -32,6 +36,10 @@ export function ImportTemplate(arg1, arg2) {
 
 export function ListTemplates() {
   return window['go']['main']['App']['ListTemplates']();
+}
+
+export function PickGameWindow() {
+  return window['go']['main']['App']['PickGameWindow']();
 }
 
 export function QuitApp() {

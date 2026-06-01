@@ -9,10 +9,12 @@ import (
 
 var errWindowsOnly = errors.New("截图功能仅支持 Windows")
 
-func captureScreen(_ string) (image.Image, error) {
+func captureScreen(_ AppSettings) (image.Image, error) {
 	return nil, errWindowsOnly
 }
 
-func captureScreenPNGBase64(_ string) (string, error) {
+func captureScreenPNGBase64(_ AppSettings) (string, error) {
 	return "", errWindowsOnly
 }
+
+func releaseDmCaptureBinding() {}

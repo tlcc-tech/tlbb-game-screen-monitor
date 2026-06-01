@@ -27,6 +27,9 @@ export namespace main {
 	    usePing: boolean;
 	    useHttp: boolean;
 	    gameWindowTitle: string;
+	    gameWindowHwnd: number;
+	    hotkeyStart: string;
+	    hotkeyStop: string;
 	    notifyOnRecover: boolean;
 	    templates: TemplateItem[];
 	
@@ -46,6 +49,9 @@ export namespace main {
 	        this.usePing = source["usePing"];
 	        this.useHttp = source["useHttp"];
 	        this.gameWindowTitle = source["gameWindowTitle"];
+	        this.gameWindowHwnd = source["gameWindowHwnd"];
+	        this.hotkeyStart = source["hotkeyStart"];
+	        this.hotkeyStop = source["hotkeyStop"];
 	        this.notifyOnRecover = source["notifyOnRecover"];
 	        this.templates = this.convertValues(source["templates"], TemplateItem);
 	    }
@@ -156,6 +162,22 @@ export namespace main {
 	        this.file = source["file"];
 	        this.threshold = source["threshold"];
 	        this.enabled = source["enabled"];
+	    }
+	}
+	export class WindowInfo {
+	    hwnd: number;
+	    title: string;
+	    className: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new WindowInfo(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.hwnd = source["hwnd"];
+	        this.title = source["title"];
+	        this.className = source["className"];
 	    }
 	}
 
