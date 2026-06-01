@@ -79,7 +79,6 @@ func (m *Monitor) Attach(appCtx context.Context) {
 	if s, err := loadSettings(); err == nil {
 		m.settings = s
 	}
-	_ = migrateTemplatesToBMP()
 }
 
 func (m *Monitor) GetSettings() AppSettings {
@@ -123,11 +122,6 @@ func (m *Monitor) Start(channelKey string, settings AppSettings) error {
 	m.mu.Unlock()
 
 	go m.loop(ctx)
-	if settings.UseDmMatcher && dmFilesExist(settings) {
-		m.emitLog("匹配引擎: 大漠 FindPic")
-	} else {
-		m.emitLog("匹配引擎: lookup")
-	}
 	m.emitLog("监控已启动")
 	return nil
 }
@@ -146,7 +140,6 @@ func (m *Monitor) Stop() {
 	m.hitStreak = 0
 	m.pendingTemplate = ""
 	m.mu.Unlock()
-	stopDMSidecar()
 	m.emitLog("监控已停止")
 }
 
@@ -246,36 +239,18 @@ func (m *Monitor) checkOnce(ctx context.Context, settings AppSettings) {
 	start := time.Now()
 	m.emitLog("开始识别…")
 
-	var scores []MatchScore
-	var capElapsed, matchElapsed time.Duration
-	usedDM := false
-
-	if settings.UseDmMatcher && dmFilesExist(settings) {
-		m.mu.Lock()
-		templates := append([]TemplateItem(nil), m.settings.Templates...)
-		m.mu.Unlock()
-		matchStart := time.Now()
-		if dmScores, ok := m.matchAllDM(settings, templates); ok {
-			scores = dmScores
-			matchElapsed = time.Since(matchStart)
-			usedDM = true
-		}
+	capStart := time.Now()
+	screen, err := captureScreen(settings.GameWindowTitle)
+	capElapsed := time.Since(capStart)
+	if err != nil {
+		m.setError(err.Error())
+		m.emitLog("截图失败: " + err.Error())
+		return
 	}
 
-	if !usedDM {
-		capStart := time.Now()
-		screen, err := captureScreen(settings.GameWindowTitle)
-		capElapsed = time.Since(capStart)
-		if err != nil {
-			m.setError(err.Error())
-			m.emitLog("截图失败: " + err.Error())
-			return
-		}
-		matchStart := time.Now()
-		scores = m.matchAll(screen)
-		matchElapsed = time.Since(matchStart)
-	}
-
+	matchStart := time.Now()
+	scores := m.matchAll(screen)
+	matchElapsed := time.Since(matchStart)
 	elapsed := time.Since(start)
 	m.mu.Lock()
 	m.lastScores = scores
@@ -284,11 +259,7 @@ func (m *Monitor) checkOnce(ctx context.Context, settings AppSettings) {
 	m.mu.Unlock()
 
 	m.emitMatch(scores)
-	if usedDM {
-		m.emitLog(fmt.Sprintf("识别完成，匹配 %.1fs（大漠 FindPic，共 %.1fs）", matchElapsed.Seconds(), elapsed.Seconds()))
-	} else {
-		m.emitLog(fmt.Sprintf("识别完成，截图 %.1fs / 匹配 %.1fs（共 %.1fs）", capElapsed.Seconds(), matchElapsed.Seconds(), elapsed.Seconds()))
-	}
+	m.emitLog(fmt.Sprintf("识别完成，截图 %.1fs / 匹配 %.1fs（共 %.1fs）", capElapsed.Seconds(), matchElapsed.Seconds(), elapsed.Seconds()))
 
 	bestName := ""
 	bestScore := 0.0
