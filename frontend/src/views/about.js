@@ -9,8 +9,8 @@ export function renderAboutModal(container, appInfo, onClose) {
       <h2 class="modal-title">关于我们</h2>
       <div class="modal-scroll">
         <p class="modal-text">
-          专注《怀旧天龙八部》玩家服务，玩转江湖更轻松；更新抢先看，第一时间解读游戏公告，分析版本变动；
-          打造思路全分享，从入门到精通，门派养成、装备搭配、珍兽打造。
+          争取用免费的工具，鞭策畅游的开发人员和策划，把游戏做得更好。CC科技更专注《怀旧天龙八部》玩家服务，玩转江湖更轻松；更新抢先看，第一时间解读游戏公告，分析版本变动；
+          打造思路全分享，从入门到精通，门派养成、装备搭配、珍兽打造。CC科技，永久免费。
         </p>
         <p class="modal-meta">
           作者：${escapeHtml(appInfo.author || "怀旧天龙CC科技")}　版本：${escapeHtml(appInfo.version || "-")}
